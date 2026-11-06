@@ -1606,7 +1606,7 @@ local UI = (function()
 
         local attachments = self.ui:_frame(row, {
             BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5),
-            Position = UDim2.new(1, 0, 0.5, 1),
+            Position = UDim2.new(1, 0, 0.5, 2),
             Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X,
         })
         local attLayout = create("UIListLayout", {
@@ -1670,7 +1670,7 @@ local UI = (function()
         
         local attachments = ui:_frame(row, {
             BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5),
-            Position = UDim2.new(1, 0, 0.5, 2),
+            Position = UDim2.new(1, 0, 0.5, 4),
             Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X,
         })
         local attLayout = create("UIListLayout", {
@@ -3026,7 +3026,7 @@ local UI = (function()
                     gear.LayoutOrder = 100
                 else
                     gear.AnchorPoint = Vector2.new(1, 0.5)
-                    gear.Position = UDim2.new(1, -22, 0.5, 2)
+                    gear.Position = UDim2.new(1, -22, 0.5, 4)
                 end
 
                 local icon, tint = section.ui:_icon(gear, "settings", 17)
