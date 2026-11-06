@@ -1606,7 +1606,7 @@ local UI = (function()
 
         local attachments = self.ui:_frame(row, {
             BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5),
-            Position = UDim2.new(1, 0, 0.5, 0),
+            Position = UDim2.new(1, 0, 0.5, 1),
             Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X,
         })
         local attLayout = create("UIListLayout", {
@@ -1665,12 +1665,12 @@ local UI = (function()
         }, "muted")
         pill(thumb)
         local caption = ui:_text(row, options.Text or "Toggle")
-        caption.Position = UDim2.fromOffset(44, 0)
-        caption.Size = UDim2.new(1, -44, 1, 0)
+        caption.Position = UDim2.fromOffset(38, 0)
+        caption.Size = UDim2.new(1, -38, 1, 0)
         
         local attachments = ui:_frame(row, {
             BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5),
-            Position = UDim2.new(1, 0, 0.5, 0),
+            Position = UDim2.new(1, 0, 0.5, 1),
             Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X,
         })
         local attLayout = create("UIListLayout", {
@@ -1681,7 +1681,7 @@ local UI = (function()
             Padding = UDim.new(0, 4),
         }, attachments)
         attLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-            caption.Size = UDim2.new(1, -44 - attachments.AbsoluteSize.X, 1, 0)
+            caption.Size = UDim2.new(1, -38 - attachments.AbsoluteSize.X, 1, 0)
         end)
 
         local state, initialized = false, false
@@ -3026,7 +3026,7 @@ local UI = (function()
                     gear.LayoutOrder = 100
                 else
                     gear.AnchorPoint = Vector2.new(1, 0.5)
-                    gear.Position = UDim2.new(1, -22, 0.5, 0)
+                    gear.Position = UDim2.new(1, -22, 0.5, 1)
                 end
 
                 local icon, tint = section.ui:_icon(gear, "settings", 17)
