@@ -425,6 +425,8 @@ local UI = (function()
         })
         self.watermarkEnabled = options.Watermark ~= false
         self.keybindListEnabled = options.KeybindList ~= false
+        self.targetHUDEnabled = options.TargetHud ~= false
+        self.moderatorsEnabled = options.Moderators ~= false
         self.hudName = tostring(options.WatermarkName or options.Title or "Skid hub")
         self.keybindRows = {}
         self.keybindDirty = true
@@ -449,17 +451,17 @@ local UI = (function()
         self.watermarkStats.Size = UDim2.new(1, -132, 1, 0)
         self.watermarkStats.TextTruncate = Enum.TextTruncate.AtEnd
 
-        local tPanel, tHeader = self:_hudCard("TargetHUD", UDim2.new(0, 12, .5, 0), Vector2.new(0, .5), 240, 70)
+        local tPanel, tHeader = self:_hudCard("TargetHUD", UDim2.new(1, -252, .5, 110), Vector2.new(0, .5), 240, 90)
         self.targetHUD = tPanel
-        self.targetHUD.Visible = false
-        
-        local tTitle = self:_text(tHeader, "Status Viewer", nil, "accent")
-        tTitle.Position = UDim2.fromOffset(12, 0)
-        tTitle.Size = UDim2.fromOffset(92, 32)
-        
+        self.targetHUD.Visible = self.targetHUDEnabled
+
         local tIcon = self:_frame(tHeader, { BackgroundTransparency = 1, Position = UDim2.fromOffset(12, 9), Size = UDim2.fromOffset(14, 14) })
-        self:_icon(tIcon, "eye", 14, "accent")
+        self:_icon(tIcon, "person", 14, "accent")
         
+        local tTitle = self:_text(tHeader, "Target HUD")
+        tTitle.Position = UDim2.fromOffset(34, 0)
+        tTitle.Size = UDim2.new(1, -46, 1, 0)
+
         self.targetAvatar = create("ImageLabel", {
             BackgroundColor3 = Color3.fromRGB(20, 20, 20),
             BorderSizePixel = 0, Position = UDim2.fromOffset(10, 36),
@@ -471,21 +473,23 @@ local UI = (function()
         self.targetName = self:_text(self.targetHUD, "Player: None", 11, "text")
         self.targetName.Position = UDim2.fromOffset(46, 34)
         self.targetName.Size = UDim2.new(1, -56, 0, 14)
-        
+
         self.targetStatus = self:_text(self.targetHUD, "Status: None", 11, "muted")
         self.targetStatus.Position = UDim2.fromOffset(46, 48)
         self.targetStatus.Size = UDim2.new(1, -56, 0, 14)
-        
+
         self.targetHealthBg = self:_frame(self.targetHUD, {
             BorderSizePixel = 0, Position = UDim2.fromOffset(46, 64),
             Size = UDim2.new(1, -56, 0, 4),
         }, "raised")
         self:_stroke(self.targetHealthBg, "outline", 0.5)
-        
+
         self.targetHealthBar = self:_frame(self.targetHealthBg, {
-            BorderSizePixel = 0, Size = UDim2.new(1, 0, 1, 0),
+            BorderSizePixel = 0, Size = UDim2.new(0, 0, 1, 0),
         })
-        self.targetHealthBar.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
+        self.targetHealthBar.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
+
+        self.targetAvatar.Image = "rbxassetid://128484340819096"
 
         local panel, header = self:_hudCard("Keybinds", UDim2.new(0, 12, .5, 0), Vector2.new(0, .5), 240, 40)
         self.keybindPanel = panel
@@ -508,16 +512,16 @@ local UI = (function()
         self.keybindEmpty.Position = UDim2.fromOffset(24, 0)
         self.keybindEmpty.Size = UDim2.new(1, -34, 0, 24)
 
-        local modPanel, modHeader = self:_hudCard("Moderators", UDim2.new(0, 12, .5, 0), Vector2.new(0, .5), 240, 40)
+        local modPanel, modHeader = self:_hudCard("Moderators", UDim2.new(1, -252, .5, 0), Vector2.new(0, .5), 240, 90)
         self.modPanel = modPanel
-        self.modPanel.Visible = true
+        self.modPanel.Visible = self.moderatorsEnabled
         local modTitle = self:_text(modHeader, "Moderators")
         modTitle.Position = UDim2.fromOffset(12, 0)
-        modTitle.Size = UDim2.new(1, -60, 1, 0)
+        modTitle.Size = UDim2.new(1, -24, 1, 0)
         self.modBody = create("ScrollingFrame", {
             BackgroundTransparency = 1, BorderSizePixel = 0,
             ClipsDescendants = true, Position = UDim2.fromOffset(0, 36),
-            Size = UDim2.new(1, 0, 0, 0), CanvasSize = UDim2.new(),
+            Size = UDim2.new(1, 0, 1, -36), CanvasSize = UDim2.new(),
             ScrollBarThickness = 2,
         }, self.modPanel)
         self:_bind(self.modBody, "ScrollBarImageColor3", "accent")
@@ -538,6 +542,7 @@ local UI = (function()
         self:_makeDraggable(self.keybindPanel, header)
         self:_makeDraggable(self.targetHUD, tHeader)
         self:_makeDraggable(self.modPanel, modHeader)
+        self:SetModerators({})
         self:_sampleHUD()
         self:_paintWatermark()
     end
@@ -656,6 +661,18 @@ local UI = (function()
         self.keybindPanel.Visible = self.keybindListEnabled
     end
 
+    function UI:SetTargetHUDVisible(value)
+        if self.destroyed then return end
+        self.targetHUDEnabled = value == true
+        self.targetHUD.Visible = self.targetHUDEnabled
+    end
+
+    function UI:SetModeratorsVisible(value)
+        if self.destroyed then return end
+        self.moderatorsEnabled = value == true
+        self.modPanel.Visible = self.moderatorsEnabled
+    end
+
     function UI:SetWatermarkName(value)
         if self.destroyed then return end
         self.hudName = tostring(value or "Skid hub")
@@ -664,51 +681,86 @@ local UI = (function()
     end
 
     function UI:SetTarget(name, status, health, playerObj)
+        if self.destroyed or not self.targetHUDEnabled then return end
+
         if not name then
-            self.targetHUD.Visible = false
+            if self._currentTargetName ~= nil then
+                self._currentTargetName = nil
+                self._currentStatus = nil
+                self._currentHealth = nil
+                self:_changeText(self.targetName, "Player: None", true)
+                self:_changeText(self.targetStatus, "Status: None", true)
+                self.targetStatus.TextColor3 = self.colors.muted
+                self.targetHealthBar.Size = UDim2.new(0, 0, 1, 0)
+                self.targetAvatar.Image = "rbxassetid://128484340819096"
+            end
             return
         end
-        self.targetHUD.Visible = true
-        self:_changeText(self.targetName, "Player: " .. tostring(name), true)
-        self:_changeText(self.targetStatus, "Status: " .. tostring(status), true)
-        
-        if status == "Visible" then
-            self.targetStatus.TextColor3 = Color3.fromRGB(255, 100, 150)
-        elseif status == "Teammate" then
-            self.targetStatus.TextColor3 = Color3.fromRGB(100, 255, 100)
-        else
-            self.targetStatus.TextColor3 = self.colors.muted
+
+        if self._currentTargetName ~= name then
+            self._currentTargetName = name
+            self:_changeText(self.targetName, "Player: " .. tostring(name), true)
+            
+            if playerObj then
+                local currentName = name
+                task.spawn(function()
+                    local ok, image = pcall(Players.GetUserThumbnailAsync, Players, playerObj.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+                    if ok and not self.destroyed and self._currentTargetName == currentName then 
+                        self.targetAvatar.Image = image 
+                    end
+                end)
+            else
+                self.targetAvatar.Image = "rbxassetid://128484340819096"
+            end
         end
-        
-        self.targetHealthBar.Size = UDim2.new(math.clamp(health, 0, 1), 0, 1, 0)
-        
-        if playerObj then
-            task.spawn(function()
-                local ok, image = pcall(Players.GetUserThumbnailAsync, Players, playerObj.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
-                if ok then self.targetAvatar.Image = image end
-            end)
-        else
-            self.targetAvatar.Image = "rbxassetid://128484340819096"
+
+        if self._currentStatus ~= status then
+            self._currentStatus = status
+            self:_changeText(self.targetStatus, "Status: " .. tostring(status), true)
+            if status == "Visible" then
+                self.targetStatus.TextColor3 = Color3.fromRGB(255, 100, 150)
+            elseif status == "Teammate" then
+                self.targetStatus.TextColor3 = Color3.fromRGB(100, 255, 100)
+            else
+                self.targetStatus.TextColor3 = self.colors.muted
+            end
+        end
+
+        local clampedHealth = math.clamp(health or 0, 0, 1)
+        if math.abs((self._currentHealth or -1) - clampedHealth) > 0.001 then
+            self._currentHealth = clampedHealth
+            self.targetHealthBar.Size = UDim2.new(clampedHealth, 0, 1, 0)
         end
     end
 
     function UI:SetModerators(list)
+        if self.destroyed then return end
+        list = list or {}
         for _, x in ipairs(self.modBody:GetChildren()) do
-            if x:IsA("TextButton") or x:IsA("Frame") then x:Destroy() end
+            if x:IsA("GuiObject") then x:Destroy() end
         end
-        for i, modName in ipairs(list) do
-            local row = self:_frame(self.modBody, { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 24) })
-            row.Position = UDim2.fromOffset(0, (i - 1) * 24)
-            local dot = self:_frame(row, { BorderSizePixel = 0, Position = UDim2.fromOffset(12, 10), Size = UDim2.fromOffset(4, 4) }, "outline")
+
+        local mods = list
+        if #mods == 0 then mods = {"None"} end
+
+        for i, modName in ipairs(mods) do
+            local row = self:_frame(self.modBody, { 
+                BackgroundTransparency = 1, 
+                Size = UDim2.new(1, 0, 0, 24),
+                Position = UDim2.fromOffset(0, (i - 1) * 24),
+            })
+            local dot = self:_frame(row, { 
+                BorderSizePixel = 0, 
+                Position = UDim2.fromOffset(12, 10), 
+                Size = UDim2.fromOffset(4, 4) 
+            }, "outline")
             pill(dot)
             local text = self:_text(row, modName)
             text.Position = UDim2.fromOffset(24, 0)
             text.Size = UDim2.new(1, -34, 1, 0)
         end
-        self.modBody.CanvasSize = UDim2.fromOffset(0, #list * 24)
-        self.modPanel.Size = UDim2.fromOffset(240, math.min(#list * 24, 200) + 40)
-        self.modBody.Size = UDim2.new(1, 0, 0, math.min(#list * 24, 200))
-        self:_layoutHUD()
+
+        self.modBody.CanvasSize = UDim2.fromOffset(0, #mods * 24)
     end
 
     function UI:_measureText(label)
@@ -796,7 +848,15 @@ local UI = (function()
 
     function UI:_fitDraggables()
         for _, entry in ipairs(self.dragItems or {}) do
-            entry.target = self:_clampDrag(entry.frame, entry.target or entry.frame.Position)
+            local frame = entry.frame
+            if frame.Parent then
+                local current = entry.target or frame.Position
+                local clamped = self:_clampDrag(frame, current)
+                if clamped.X.Offset ~= current.X.Offset or clamped.Y.Offset ~= current.Y.Offset
+                    or clamped.X.Scale ~= current.X.Scale or clamped.Y.Scale ~= current.Y.Scale then
+                    entry.target = clamped
+                end
+            end
         end
     end
 
@@ -821,13 +881,6 @@ local UI = (function()
         self.keybindPanel.Size = UDim2.fromOffset(math.min(240, self.viewport.X - 24), height + 40)
         self.keybindBody.Size = UDim2.new(1, 0, 0, height)
         self.keybindBody.CanvasSize = UDim2.fromOffset(0, bodyRows * 24)
-        
-        local startY = .5
-        self.targetHUD.Position = UDim2.new(0, 12, startY, -self.targetHUD.Size.Y.Offset - 10)
-        self.keybindPanel.Position = UDim2.new(0, 12, startY, 0)
-        self.modPanel.Position = UDim2.new(0, 12, startY, height + 50)
-        
-        self:_fitDraggables()
     end
 
     function Section:_resizeNow()
@@ -2820,7 +2873,7 @@ local UI = (function()
         local parentSection = self
         gearSection.reveal = function()
             ui:Select(parentSection.tab.page, parentSection.tab)
-            ui:_openPopup(gear, popup, 250, math.max(45, ll.AbsoluteContentSize.Y + 16), parentSection.popupOwner)
+            ui:_openPopup(gear, popup, 250, math.max(30, ll.AbsoluteContentSize.Y + 16), parentSection.popupOwner)
         end
         if options.Build then
             invoke(options.Build, gearSection)
@@ -2837,7 +2890,7 @@ local UI = (function()
             ui:_tween(icon, {Rotation = 0}, .3); tint(ui.colors.muted)
         end)
         ui:_ownedConnect(row, gear.Activated, function()
-            ui:_openPopup(gear, popup, 250, math.max(45, ll.AbsoluteContentSize.Y + 16), self.popupOwner)
+            ui:_openPopup(gear, popup, 250, math.max(30, ll.AbsoluteContentSize.Y + 16), self.popupOwner)
         end)
         toggle.Gear = gearSection
         return toggle
@@ -3154,7 +3207,7 @@ local UI = (function()
                 }, Section)
                 settingsSection.reveal = function()
                     section.ui:Select(section.tab.page, section.tab)
-                    section.ui:_openPopup(gear, popup, 250, math.max(45, ll.AbsoluteContentSize.Y + 16), section.popupOwner)
+                    section.ui:_openPopup(gear, popup, 250, math.max(30, ll.AbsoluteContentSize.Y + 16), section.popupOwner)
                 end
                 childOptions = childOptions or {}
                 if childOptions.Build then
@@ -3169,7 +3222,7 @@ local UI = (function()
                     section.ui:_tween(icon, {Rotation = 0}, .3); tint(section.ui.colors.muted)
                 end)
                 section.ui:_ownedConnect(self.Instance, gear.Activated, function()
-                    section.ui:_openPopup(gear, popup, 250, math.max(45, ll.AbsoluteContentSize.Y + 16), section.popupOwner)
+                    section.ui:_openPopup(gear, popup, 250, math.max(30, ll.AbsoluteContentSize.Y + 16), section.popupOwner)
                 end)
                 self.GearButton = gear
                 return settingsSection
