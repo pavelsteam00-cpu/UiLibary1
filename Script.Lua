@@ -352,7 +352,7 @@ local UI = (function()
             local selected = b:GetAttribute("Selected")
             self:_tween(b, {
                 BackgroundColor3 = selected and self.colors.accent
-                    or (hover and self.colors.hover or self.colors.raised),
+                    or (hover and self.colors.hover or self.colors.panel),
             }, .22)
             self:_tween(outline, {Transparency = hover and .78 or 1}, .22)
         end
@@ -449,6 +449,44 @@ local UI = (function()
         self.watermarkStats.Size = UDim2.new(1, -132, 1, 0)
         self.watermarkStats.TextTruncate = Enum.TextTruncate.AtEnd
 
+        local tPanel, tHeader = self:_hudCard("TargetHUD", UDim2.new(0, 12, .5, 0), Vector2.new(0, .5), 240, 70)
+        self.targetHUD = tPanel
+        self.targetHUD.Visible = false
+        
+        local tTitle = self:_text(tHeader, "Status Viewer", nil, "accent")
+        tTitle.Position = UDim2.fromOffset(12, 0)
+        tTitle.Size = UDim2.fromOffset(92, 32)
+        
+        local tIcon = self:_frame(tHeader, { BackgroundTransparency = 1, Position = UDim2.fromOffset(12, 9), Size = UDim2.fromOffset(14, 14) })
+        self:_icon(tIcon, "eye", 14, "accent")
+        
+        self.targetAvatar = create("ImageLabel", {
+            BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+            BorderSizePixel = 0, Position = UDim2.fromOffset(10, 36),
+            Size = UDim2.fromOffset(30, 30),
+        }, self.targetHUD)
+        round(self.targetAvatar, 4)
+        self:_stroke(self.targetAvatar, "outline", 0.5)
+
+        self.targetName = self:_text(self.targetHUD, "Player: None", 11, "text")
+        self.targetName.Position = UDim2.fromOffset(46, 34)
+        self.targetName.Size = UDim2.new(1, -56, 0, 14)
+        
+        self.targetStatus = self:_text(self.targetHUD, "Status: None", 11, "muted")
+        self.targetStatus.Position = UDim2.fromOffset(46, 48)
+        self.targetStatus.Size = UDim2.new(1, -56, 0, 14)
+        
+        self.targetHealthBg = self:_frame(self.targetHUD, {
+            BorderSizePixel = 0, Position = UDim2.fromOffset(46, 64),
+            Size = UDim2.new(1, -56, 0, 4),
+        }, "raised")
+        self:_stroke(self.targetHealthBg, "outline", 0.5)
+        
+        self.targetHealthBar = self:_frame(self.targetHealthBg, {
+            BorderSizePixel = 0, Size = UDim2.new(1, 0, 1, 0),
+        })
+        self.targetHealthBar.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
+
         local panel, header = self:_hudCard("Keybinds", UDim2.new(0, 12, .5, 0), Vector2.new(0, .5), 240, 40)
         self.keybindPanel = panel
         panel.Visible = self.keybindListEnabled
@@ -470,6 +508,20 @@ local UI = (function()
         self.keybindEmpty.Position = UDim2.fromOffset(24, 0)
         self.keybindEmpty.Size = UDim2.new(1, -34, 0, 24)
 
+        local modPanel, modHeader = self:_hudCard("Moderators", UDim2.new(0, 12, .5, 0), Vector2.new(0, .5), 240, 40)
+        self.modPanel = modPanel
+        self.modPanel.Visible = true
+        local modTitle = self:_text(modHeader, "Moderators")
+        modTitle.Position = UDim2.fromOffset(12, 0)
+        modTitle.Size = UDim2.new(1, -60, 1, 0)
+        self.modBody = create("ScrollingFrame", {
+            BackgroundTransparency = 1, BorderSizePixel = 0,
+            ClipsDescendants = true, Position = UDim2.fromOffset(0, 36),
+            Size = UDim2.new(1, 0, 0, 0), CanvasSize = UDim2.new(),
+            ScrollBarThickness = 2,
+        }, self.modPanel)
+        self:_bind(self.modBody, "ScrollBarImageColor3", "accent")
+
         local ok, stat = pcall(function()
             return game:GetService("Stats").Network.ServerStatsItem["Data Ping"]
         end)
@@ -484,6 +536,8 @@ local UI = (function()
 
         self:_makeDraggable(self.watermark, self.watermark)
         self:_makeDraggable(self.keybindPanel, header)
+        self:_makeDraggable(self.targetHUD, tHeader)
+        self:_makeDraggable(self.modPanel, modHeader)
         self:_sampleHUD()
         self:_paintWatermark()
     end
@@ -609,6 +663,54 @@ local UI = (function()
         self:_layoutHUD()
     end
 
+    function UI:SetTarget(name, status, health, playerObj)
+        if not name then
+            self.targetHUD.Visible = false
+            return
+        end
+        self.targetHUD.Visible = true
+        self:_changeText(self.targetName, "Player: " .. tostring(name), true)
+        self:_changeText(self.targetStatus, "Status: " .. tostring(status), true)
+        
+        if status == "Visible" then
+            self.targetStatus.TextColor3 = Color3.fromRGB(255, 100, 150)
+        elseif status == "Teammate" then
+            self.targetStatus.TextColor3 = Color3.fromRGB(100, 255, 100)
+        else
+            self.targetStatus.TextColor3 = self.colors.muted
+        end
+        
+        self.targetHealthBar.Size = UDim2.new(math.clamp(health, 0, 1), 0, 1, 0)
+        
+        if playerObj then
+            task.spawn(function()
+                local ok, image = pcall(Players.GetUserThumbnailAsync, Players, playerObj.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+                if ok then self.targetAvatar.Image = image end
+            end)
+        else
+            self.targetAvatar.Image = "rbxassetid://128484340819096"
+        end
+    end
+
+    function UI:SetModerators(list)
+        for _, x in ipairs(self.modBody:GetChildren()) do
+            if x:IsA("TextButton") or x:IsA("Frame") then x:Destroy() end
+        end
+        for i, modName in ipairs(list) do
+            local row = self:_frame(self.modBody, { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 24) })
+            row.Position = UDim2.fromOffset(0, (i - 1) * 24)
+            local dot = self:_frame(row, { BorderSizePixel = 0, Position = UDim2.fromOffset(12, 10), Size = UDim2.fromOffset(4, 4) }, "outline")
+            pill(dot)
+            local text = self:_text(row, modName)
+            text.Position = UDim2.fromOffset(24, 0)
+            text.Size = UDim2.new(1, -34, 1, 0)
+        end
+        self.modBody.CanvasSize = UDim2.fromOffset(0, #list * 24)
+        self.modPanel.Size = UDim2.fromOffset(240, math.min(#list * 24, 200) + 40)
+        self.modBody.Size = UDim2.new(1, 0, 0, math.min(#list * 24, 200))
+        self:_layoutHUD()
+    end
+
     function UI:_measureText(label)
         return math.ceil(TextService:GetTextSize(
             label.Text, label.TextSize, label.Font, Vector2.new(100000, 100000)
@@ -712,12 +814,19 @@ local UI = (function()
         self.watermarkDivider.Position = UDim2.fromOffset(24 + brand, 9)
         self.watermarkStats.Position = UDim2.fromOffset(36 + brand, 0)
         self.watermarkStats.Size = UDim2.fromOffset(stats, 32)
+        
         local visibleBindings = self.keybindVisibleCount or 0
         local bodyRows = math.max(1, visibleBindings)
         local height = math.min(bodyRows * 24, math.max(24, self.viewport.Y - 100))
         self.keybindPanel.Size = UDim2.fromOffset(math.min(240, self.viewport.X - 24), height + 40)
         self.keybindBody.Size = UDim2.new(1, 0, 0, height)
         self.keybindBody.CanvasSize = UDim2.fromOffset(0, bodyRows * 24)
+        
+        local startY = .5
+        self.targetHUD.Position = UDim2.new(0, 12, startY, -self.targetHUD.Size.Y.Offset - 10)
+        self.keybindPanel.Position = UDim2.new(0, 12, startY, 0)
+        self.modPanel.Position = UDim2.new(0, 12, startY, height + 50)
+        
         self:_fitDraggables()
     end
 
@@ -963,7 +1072,7 @@ local UI = (function()
                 local q, s = object.AbsolutePosition, object.AbsoluteSize
                 return p.X >= q.X and p.X <= q.X + s.X and p.Y >= q.Y and p.Y <= q.Y + s.Y
             end
-            if inside(self.watermark) or inside(self.keybindPanel) or inside(self.searchBox) then return false end
+            if inside(self.watermark) or inside(self.keybindPanel) or inside(self.targetHUD) or inside(self.modPanel) or inside(self.searchBox) then return false end
             for _, page in ipairs(self.pages) do
                 for _, tab in ipairs(page.tabs) do
                     if tab.slot.Visible and inside(tab.button) then return false end
@@ -1403,6 +1512,7 @@ local UI = (function()
             tab.button.TextTruncate = Enum.TextTruncate.AtEnd
             tab.button.Size = UDim2.fromScale(1, 1)
             tab.button.ZIndex = 3
+            tab.button.BackgroundColor3 = ui.colors.panel
             tab.body = create("CanvasGroup", {
                 BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1),
                 Visible = false, GroupTransparency = 1,
@@ -1438,7 +1548,7 @@ local UI = (function()
             table.insert(ui.repaint, function()
                 local selected = ui.selectedTab == tab
                 ui:_tween(tab.button, {
-                    BackgroundColor3 = selected and ui.accent or ui.colors.background,
+                    BackgroundColor3 = selected and ui.accent or ui.colors.panel,
                     TextColor3 = selected and ui.colors.ink or ui.colors.muted,
                 }, .26)
                 tab.glow(selected)
@@ -2694,13 +2804,13 @@ local UI = (function()
             Position = UDim2.new(1, -24, 0, 0),
         }, row)
         local icon, tint = ui:_icon(gear, "settings", 17)
-        local popup = ui:_makePopup(250, 202)
+        local popup = ui:_makePopup(250, 45)
         local items = ui:_frame(popup, {
-            BackgroundTransparency = 1, Position = UDim2.fromOffset(12, 12),
-            Size = UDim2.new(1, -24, 0, 0),
+            BackgroundTransparency = 1, Position = UDim2.fromOffset(8, 8),
+            Size = UDim2.new(1, -16, 0, 0),
             AutomaticSize = Enum.AutomaticSize.Y,
         })
-        local ll = layout(items, 8)
+        local ll = layout(items, 4)
         local gearSection = setmetatable({
             ui = ui, tab = self.tab,
             title = (options.Text or "Toggle") .. " Gear",
@@ -2710,7 +2820,7 @@ local UI = (function()
         local parentSection = self
         gearSection.reveal = function()
             ui:Select(parentSection.tab.page, parentSection.tab)
-            ui:_openPopup(gear, popup, 250, math.max(60, ll.AbsoluteContentSize.Y + 24), parentSection.popupOwner)
+            ui:_openPopup(gear, popup, 250, math.max(45, ll.AbsoluteContentSize.Y + 16), parentSection.popupOwner)
         end
         if options.Build then
             invoke(options.Build, gearSection)
@@ -2727,7 +2837,7 @@ local UI = (function()
             ui:_tween(icon, {Rotation = 0}, .3); tint(ui.colors.muted)
         end)
         ui:_ownedConnect(row, gear.Activated, function()
-            ui:_openPopup(gear, popup, 250, math.max(60, ll.AbsoluteContentSize.Y + 24), self.popupOwner)
+            ui:_openPopup(gear, popup, 250, math.max(45, ll.AbsoluteContentSize.Y + 16), self.popupOwner)
         end)
         toggle.Gear = gearSection
         return toggle
@@ -3030,12 +3140,12 @@ local UI = (function()
                 end
 
                 local icon, tint = section.ui:_icon(gear, "settings", 17)
-                local popup = section.ui:_makePopup(250, 202)
+                local popup = section.ui:_makePopup(250, 45)
                 local items = section.ui:_frame(popup, {
-                    BackgroundTransparency = 1, Position = UDim2.fromOffset(12, 12),
-                    Size = UDim2.new(1, -24, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
+                    BackgroundTransparency = 1, Position = UDim2.fromOffset(8, 8),
+                    Size = UDim2.new(1, -16, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
                 })
-                local ll = layout(items, 8)
+                local ll = layout(items, 4)
                 local settingsSection = setmetatable({
                     ui = section.ui, tab = section.tab,
                     title = (childIndex or "Settings") .. " Settings",
@@ -3044,7 +3154,7 @@ local UI = (function()
                 }, Section)
                 settingsSection.reveal = function()
                     section.ui:Select(section.tab.page, section.tab)
-                    section.ui:_openPopup(gear, popup, 250, math.max(60, ll.AbsoluteContentSize.Y + 24), section.popupOwner)
+                    section.ui:_openPopup(gear, popup, 250, math.max(45, ll.AbsoluteContentSize.Y + 16), section.popupOwner)
                 end
                 childOptions = childOptions or {}
                 if childOptions.Build then
@@ -3059,7 +3169,7 @@ local UI = (function()
                     section.ui:_tween(icon, {Rotation = 0}, .3); tint(section.ui.colors.muted)
                 end)
                 section.ui:_ownedConnect(self.Instance, gear.Activated, function()
-                    section.ui:_openPopup(gear, popup, 250, math.max(60, ll.AbsoluteContentSize.Y + 24), section.popupOwner)
+                    section.ui:_openPopup(gear, popup, 250, math.max(45, ll.AbsoluteContentSize.Y + 16), section.popupOwner)
                 end)
                 self.GearButton = gear
                 return settingsSection
