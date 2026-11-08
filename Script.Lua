@@ -1,3 +1,4 @@
+```
 local UI = (function()
     local Players       = game:GetService("Players")
     local Teams         = game:GetService("Teams")
@@ -780,7 +781,7 @@ local UI = (function()
         end
 
         self.modBody.CanvasSize = UDim2.fromOffset(0, #mods * 24)
-        self.modBody.Size = UDim2.new(1, 0, 0, math.clamp(#mods * 24, 24, 200))
+        self.modBody.Size = UDim2.new(1, 0, 1, -36)
         self:_layoutHUD()
     end
 
@@ -848,22 +849,14 @@ local UI = (function()
     end
 
     function UI:_stepDraggables(dt)
-        local a = 1 - math.exp(-24 * math.max(0, dt))
+        -- HUD panels follow the pointer directly. Interpolating every frame
+        -- caused visible lag/jitter when the user moved a panel.
         for _, entry in ipairs(self.dragItems) do
             local target = entry.target
             local frame = entry.frame
             if target and frame.Parent and shown(frame) then
-                local current = frame.Position
-                local dx = target.X.Offset - current.X.Offset
-                local dy = target.Y.Offset - current.Y.Offset
-                if math.abs(dx) + math.abs(dy) < .08 then
-                    frame.Position = target; entry.target = nil
-                else
-                    frame.Position = UDim2.new(
-                        target.X.Scale, current.X.Offset + dx * a,
-                        target.Y.Scale, current.Y.Offset + dy * a
-                    )
-                end
+                frame.Position = target
+                entry.target = nil
             end
         end
     end
@@ -897,11 +890,16 @@ local UI = (function()
         self.watermarkStats.Position = UDim2.fromOffset(36 + brand, 0)
         self.watermarkStats.Size = UDim2.fromOffset(stats, 32)
 
-        local keybindHeight = math.clamp((self.keybindVisibleCount or 0) * 24, 24, 200) + 40
-        local modHeight = math.clamp((self.modListCount or 1) * 24, 24, 200) + 40
+        local listHeight = math.clamp((self.keybindVisibleCount or 0) * 24, 24, 200)
+        local keybindHeight = listHeight + 40
+        -- Keep both side panels aligned to the same height.
+        local modHeight = keybindHeight
 
         self.keybindPanel.Size = UDim2.fromOffset(240, keybindHeight)
+        self.keybindBody.Size = UDim2.new(1, 0, 0, listHeight)
+        self.keybindBody.CanvasSize = UDim2.fromOffset(0, math.max(24, (self.keybindVisibleCount or 0) * 24))
         self.modPanel.Size = UDim2.fromOffset(240, modHeight)
+        self.modBody.Size = UDim2.new(1, 0, 1, -36)
 
         if not self._hudInitPos then
             self._hudInitPos = true
@@ -913,7 +911,7 @@ local UI = (function()
             
             self.targetHUD.AnchorPoint = Vector2.new(1, 0.5)
             if not (self.targetDragEntry and self.targetDragEntry.userMoved) then
-                self.targetHUD.Position = UDim2.new(1, -12, 0.5, modHeight / 2 + 20)
+                self.targetHUD.Position = UDim2.new(1, -12, 0.5, modHeight / 2 + 52)
                 self._lastModHeight = modHeight
             end
         end
@@ -921,7 +919,7 @@ local UI = (function()
         if not (self.targetDragEntry and self.targetDragEntry.userMoved) then
             if self._lastModHeight ~= modHeight then
                 self._lastModHeight = modHeight
-                self.targetHUD.Position = UDim2.new(1, -12, 0.5, modHeight / 2 + 20)
+                self.targetHUD.Position = UDim2.new(1, -12, 0.5, modHeight / 2 + 52)
             end
         end
 
@@ -4042,3 +4040,4 @@ local UI = (function()
 end)()
 
 return UI
+```
