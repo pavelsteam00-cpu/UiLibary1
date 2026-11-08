@@ -3349,6 +3349,8 @@ local UI = (function()
 
             local originalCallback = options.Callback
             options.Callback = function(...)
+                -- FIX: Extract varargs into a local packed table BEFORE entering the nested safe function.
+                -- Using '...' directly inside the nested function caused the compile error.
                 local args = table.pack(...)
                 safe(function()
                     local value
@@ -3395,12 +3397,14 @@ local UI = (function()
             if kind == "Keybind" then
                 local originalChanged = options.Changed
                 options.Changed = function(key, ...)
+                    -- FIX: Same as above, pack varargs before entering the nested safe function.
+                    local args = table.pack(...)
                     safe(function()
                         control.Value = key
                         for _, callback in ipairs(control._changedCallbacks) do
-                            invoke(callback, key, ...)
+                            invoke(callback, key, table.unpack(args, 1, args.n))
                         end
-                        invoke(originalChanged, key, ...)
+                        invoke(originalChanged, key, table.unpack(args, 1, args.n))
                     end)
                 end
             end
@@ -4357,7 +4361,7 @@ local UI = (function()
     end
 
     UI.Section = Section
-    UI.Version = "2.1.3"
+    UI.Version = "2.1.4"
     UI.Description = "SkidUi interface library"
     return UI
 end)()
