@@ -184,11 +184,16 @@ local UI = (function()
 
     function UI:_changeText(x, text, silent)
         text = tostring(text or "")
-        if x.Text == text then return end
+        if x.Text == text then 
+            if silent then x.TextTransparency = 0 end
+            return 
+        end
         x.Text = text
         if not silent then
             x.TextTransparency = .45
             self:_tween(x, {TextTransparency = 0}, .18, Enum.EasingStyle.Sine)
+        else
+            x.TextTransparency = 0
         end
     end
 
@@ -453,7 +458,7 @@ local UI = (function()
         self.watermarkStats.Size = UDim2.new(1, -132, 1, 0)
         self.watermarkStats.TextTruncate = Enum.TextTruncate.AtEnd
 
-        local tPanel, tHeader = self:_hudCard("TargetHUD", UDim2.new(1, -12, .5, 0), Vector2.new(1, .5), 240, 90)
+        local tPanel, tHeader = self:_hudCard("TargetHUD", UDim2.new(1, -12, .5, 0), Vector2.new(1, .5), 240, 80)
         self.targetHUD = tPanel
         self.targetHUD.Visible = self.targetHUDEnabled
 
@@ -467,23 +472,23 @@ local UI = (function()
         self.targetAvatar = create("ImageLabel", {
             BackgroundColor3 = Color3.fromRGB(20, 20, 20),
             BorderSizePixel = 0, Position = UDim2.fromOffset(10, 36),
-            Size = UDim2.fromOffset(30, 30),
+            Size = UDim2.fromOffset(28, 28),
         }, self.targetHUD)
         round(self.targetAvatar, 4)
         self:_stroke(self.targetAvatar, "outline", 0.5)
         self.targetAvatar.Visible = false
 
         self.targetName = self:_text(self.targetHUD, "Player: None", 11, "text")
-        self.targetName.Position = UDim2.fromOffset(46, 34)
-        self.targetName.Size = UDim2.new(1, -56, 0, 14)
+        self.targetName.Position = UDim2.fromOffset(44, 36)
+        self.targetName.Size = UDim2.new(1, -54, 0, 16)
 
         self.targetStatus = self:_text(self.targetHUD, "Status: None", 11, "muted")
-        self.targetStatus.Position = UDim2.fromOffset(46, 48)
-        self.targetStatus.Size = UDim2.new(1, -56, 0, 14)
+        self.targetStatus.Position = UDim2.fromOffset(44, 52)
+        self.targetStatus.Size = UDim2.new(1, -54, 0, 16)
 
         self.targetHealthBg = self:_frame(self.targetHUD, {
-            BorderSizePixel = 0, Position = UDim2.fromOffset(46, 64),
-            Size = UDim2.new(1, -56, 0, 4),
+            BorderSizePixel = 0, Position = UDim2.fromOffset(44, 70),
+            Size = UDim2.new(1, -54, 0, 6),
         }, "raised")
         self:_stroke(self.targetHealthBg, "outline", 0.5)
 
@@ -589,11 +594,13 @@ local UI = (function()
         row.name.Position = UDim2.fromOffset(24, 0)
         row.name.Size = UDim2.new(1, -126, 1, 0)
         row.name.TextTruncate = Enum.TextTruncate.AtEnd
+        row.name.ZIndex = 2
         row.key = self:_text(row.root, "", 11, "muted")
         row.key.TextXAlignment = Enum.TextXAlignment.Right
         row.key.Position = UDim2.new(1, -102, 0, 0)
         row.key.Size = UDim2.fromOffset(90, 24)
         row.key.TextTruncate = Enum.TextTruncate.AtEnd
+        row.key.ZIndex = 2
         row.paint = function()
             local active = control:IsActive()
             self:_tween(row.dot, {BackgroundColor3 = active and self.accent or self.colors.outline}, .16)
@@ -906,7 +913,7 @@ local UI = (function()
             
             self.targetHUD.AnchorPoint = Vector2.new(1, 0.5)
             if not (self.targetDragEntry and self.targetDragEntry.userMoved) then
-                self.targetHUD.Position = UDim2.new(1, -12, 0.5, modHeight / 2 + 55)
+                self.targetHUD.Position = UDim2.new(1, -12, 0.5, modHeight / 2 + 20)
                 self._lastModHeight = modHeight
             end
         end
@@ -914,7 +921,7 @@ local UI = (function()
         if not (self.targetDragEntry and self.targetDragEntry.userMoved) then
             if self._lastModHeight ~= modHeight then
                 self._lastModHeight = modHeight
-                self.targetHUD.Position = UDim2.new(1, -12, 0.5, modHeight / 2 + 55)
+                self.targetHUD.Position = UDim2.new(1, -12, 0.5, modHeight / 2 + 20)
             end
         end
 
