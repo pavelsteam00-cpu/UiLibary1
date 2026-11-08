@@ -1333,8 +1333,16 @@ local UI = (function()
     end
 
     function UI:SetEasingStyle(name)
+        if self.destroyed then return false end
         local ok, v = pcall(function() return Enum.EasingStyle[name] end)
-        self.easing = ok and v or Enum.EasingStyle.Quart
+        if not ok or not v then return false, "Unknown easing style: " .. tostring(name) end
+        local changed = self.easing ~= v
+        self.easing = v
+        if changed and self._easingInitialized and self.notifications and self.notifications.Parent then
+            self:Notify("Easing Style", "Set to " .. tostring(name))
+        end
+        self._easingInitialized = true
+        return true
     end
 
     function UI:SetThemeColor(role, color)
@@ -1395,18 +1403,29 @@ local UI = (function()
     function UI:Toggle() self:SetVisible(not self.visible) end
 
     function UI:ResetPositions()
+        if self.destroyed then return end
         self.dragging = nil
         self:ClosePopup()
-        self._hudInitPos = false
-        self._lastModHeight = nil
+
+        self.window.Position = UDim2.fromScale(.5, .5)
+        if self.watermark then
+            self.watermark.Position = UDim2.new(.5, 0, 0, 12)
+        end
+
+        for _, entry in ipairs(self.dragItems) do
+            entry.userMoved = false
+            entry.target = nil
+        end
         if self.targetDragEntry then
             self.targetDragEntry.userMoved = false
         end
+
+        self._hudInitPos = false
+        self._lastModHeight = nil
         self:_layoutHUD()
-        for _, entry in ipairs(self.dragItems) do
-            entry.default = entry.frame.Position
-            entry.userMoved = false
-            entry.target = nil
+
+        if self.notifications and self.notifications.Parent then
+            self:Notify("Reset Positions", "All panels returned to default")
         end
     end
 
