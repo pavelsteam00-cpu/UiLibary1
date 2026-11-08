@@ -451,7 +451,7 @@ local UI = (function()
         self.watermarkStats.Size = UDim2.new(1, -132, 1, 0)
         self.watermarkStats.TextTruncate = Enum.TextTruncate.AtEnd
 
-        local tPanel, tHeader = self:_hudCard("TargetHUD", UDim2.new(1, -252, .5, 110), Vector2.new(0, .5), 240, 90)
+        local tPanel, tHeader = self:_hudCard("TargetHUD", UDim2.new(1, -12, .5, 0), Vector2.new(1, .5), 240, 90)
         self.targetHUD = tPanel
         self.targetHUD.Visible = self.targetHUDEnabled
 
@@ -469,6 +469,7 @@ local UI = (function()
         }, self.targetHUD)
         round(self.targetAvatar, 4)
         self:_stroke(self.targetAvatar, "outline", 0.5)
+        self.targetAvatar.Visible = false
 
         self.targetName = self:_text(self.targetHUD, "Player: None", 11, "text")
         self.targetName.Position = UDim2.fromOffset(46, 34)
@@ -488,8 +489,6 @@ local UI = (function()
             BorderSizePixel = 0, Size = UDim2.new(0, 0, 1, 0),
         })
         self.targetHealthBar.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
-
-        self.targetAvatar.Image = "rbxassetid://128484340819096"
 
         local panel, header = self:_hudCard("Keybinds", UDim2.new(0, 12, .5, 0), Vector2.new(0, .5), 240, 40)
         self.keybindPanel = panel
@@ -512,7 +511,7 @@ local UI = (function()
         self.keybindEmpty.Position = UDim2.fromOffset(24, 0)
         self.keybindEmpty.Size = UDim2.new(1, -34, 0, 24)
 
-        local modPanel, modHeader = self:_hudCard("Moderators", UDim2.new(1, -252, .5, 0), Vector2.new(0, .5), 240, 90)
+        local modPanel, modHeader = self:_hudCard("Moderators", UDim2.new(1, -12, .5, 0), Vector2.new(1, .5), 240, 90)
         self.modPanel = modPanel
         self.modPanel.Visible = self.moderatorsEnabled
         local modTitle = self:_text(modHeader, "Moderators")
@@ -525,6 +524,7 @@ local UI = (function()
             ScrollBarThickness = 2,
         }, self.modPanel)
         self:_bind(self.modBody, "ScrollBarImageColor3", "accent")
+        self.modListCount = 1
 
         local ok, stat = pcall(function()
             return game:GetService("Stats").Network.ServerStatsItem["Data Ping"]
@@ -692,9 +692,13 @@ local UI = (function()
                 self:_changeText(self.targetStatus, "Status: None", true)
                 self.targetStatus.TextColor3 = self.colors.muted
                 self.targetHealthBar.Size = UDim2.new(0, 0, 1, 0)
-                self.targetAvatar.Image = "rbxassetid://128484340819096"
+                self.targetAvatar.Visible = false
             end
             return
+        end
+
+        if not self.targetAvatar.Visible then
+            self.targetAvatar.Visible = true
         end
 
         if self._currentTargetName ~= name then
@@ -710,7 +714,7 @@ local UI = (function()
                     end
                 end)
             else
-                self.targetAvatar.Image = "rbxassetid://128484340819096"
+                self.targetAvatar.Image = ""
             end
         end
 
@@ -718,7 +722,7 @@ local UI = (function()
             self._currentStatus = status
             self:_changeText(self.targetStatus, "Status: " .. tostring(status), true)
             if status == "Visible" then
-                self.targetStatus.TextColor3 = Color3.fromRGB(255, 100, 150)
+                self.targetStatus.TextColor3 = self.colors.accent
             elseif status == "Teammate" then
                 self.targetStatus.TextColor3 = Color3.fromRGB(100, 255, 100)
             else
@@ -742,6 +746,7 @@ local UI = (function()
 
         local mods = list
         if #mods == 0 then mods = {"None"} end
+        self.modListCount = #mods
 
         for i, modName in ipairs(mods) do
             local row = self:_frame(self.modBody, { 
@@ -761,6 +766,8 @@ local UI = (function()
         end
 
         self.modBody.CanvasSize = UDim2.fromOffset(0, #mods * 24)
+        self.modBody.Size = UDim2.new(1, 0, 0, math.clamp(#mods * 24, 24, 200))
+        self:_layoutHUD()
     end
 
     function UI:_measureText(label)
@@ -874,13 +881,25 @@ local UI = (function()
         self.watermarkDivider.Position = UDim2.fromOffset(24 + brand, 9)
         self.watermarkStats.Position = UDim2.fromOffset(36 + brand, 0)
         self.watermarkStats.Size = UDim2.fromOffset(stats, 32)
-        
-        local visibleBindings = self.keybindVisibleCount or 0
-        local bodyRows = math.max(1, visibleBindings)
-        local height = math.min(bodyRows * 24, math.max(24, self.viewport.Y - 100))
-        self.keybindPanel.Size = UDim2.fromOffset(math.min(240, self.viewport.X - 24), height + 40)
-        self.keybindBody.Size = UDim2.new(1, 0, 0, height)
-        self.keybindBody.CanvasSize = UDim2.fromOffset(0, bodyRows * 24)
+
+        local keybindHeight = math.clamp((self.keybindVisibleCount or 0) * 24, 24, 200) + 40
+        local modHeight = math.clamp((self.modListCount or 1) * 24, 24, 200) + 40
+
+        self.keybindPanel.Size = UDim2.fromOffset(240, keybindHeight)
+        self.modPanel.Size = UDim2.fromOffset(240, modHeight)
+
+        local centerY = 0.5
+        self.keybindPanel.Position = UDim2.new(0, 12, centerY, 0)
+        self.keybindPanel.AnchorPoint = Vector2.new(0, 0.5)
+
+        self.modPanel.Position = UDim2.new(1, -12, centerY, 0)
+        self.modPanel.AnchorPoint = Vector2.new(1, 0.5)
+
+        local targetY = modHeight / 2 + 10
+        self.targetHUD.Position = UDim2.new(1, -12, centerY, targetY)
+        self.targetHUD.AnchorPoint = Vector2.new(1, 0.5)
+
+        self:_fitDraggables()
     end
 
     function Section:_resizeNow()
