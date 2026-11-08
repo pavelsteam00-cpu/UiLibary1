@@ -430,11 +430,13 @@ local UI = (function()
         self.hudName = tostring(options.WatermarkName or options.Title or "Skid hub")
         self.keybindRows = {}
         self.keybindDirty = true
+        self.keybindVisibleCount = 0
         self.hudStatsDirty = true
         self.frameCount = 0; self.frameElapsed = 0; self.statsElapsed = 0
         self.fps = 0
         self.playerCount = #Players:GetPlayers()
         self.clock = os.date("%H:%M:%S")
+        self._targetStatusRole = "muted"
 
         self.watermark = self:_hudCard("Watermark", UDim2.new(.5, 0, 0, 12), Vector2.new(.5, 0), 540, 32)
         self.watermark.Visible = self.watermarkEnabled
@@ -540,7 +542,7 @@ local UI = (function()
 
         self:_makeDraggable(self.watermark, self.watermark)
         self:_makeDraggable(self.keybindPanel, header)
-        self:_makeDraggable(self.targetHUD, tHeader)
+        self.targetDragEntry = self:_makeDraggable(self.targetHUD, tHeader)
         self:_makeDraggable(self.modPanel, modHeader)
         self:SetModerators({})
         self:_sampleHUD()
@@ -606,6 +608,7 @@ local UI = (function()
         self.keybindDirty = false
         local count, known = 0, {}
         local function visibleInSection(control)
+            if control.AlwaysInList then return true end
             local section = control._section
             local stop = section and section.tab and section.tab.body
             local node = control.Instance
@@ -690,6 +693,7 @@ local UI = (function()
                 self._currentHealth = nil
                 self:_changeText(self.targetName, "Player: None", true)
                 self:_changeText(self.targetStatus, "Status: None", true)
+                self._targetStatusRole = "muted"
                 self.targetStatus.TextColor3 = self.colors.muted
                 self.targetHealthBar.Size = UDim2.new(0, 0, 1, 0)
                 self.targetAvatar.Visible = false
@@ -722,10 +726,13 @@ local UI = (function()
             self._currentStatus = status
             self:_changeText(self.targetStatus, "Status: " .. tostring(status), true)
             if status == "Visible" then
+                self._targetStatusRole = "accent"
                 self.targetStatus.TextColor3 = self.colors.accent
             elseif status == "Teammate" then
+                self._targetStatusRole = nil
                 self.targetStatus.TextColor3 = Color3.fromRGB(100, 255, 100)
             else
+                self._targetStatusRole = "muted"
                 self.targetStatus.TextColor3 = self.colors.muted
             end
         end
@@ -807,7 +814,7 @@ local UI = (function()
     end
 
     function UI:_makeDraggable(frame, handle, filter)
-        local entry = {frame = frame, default = frame.Position}
+        local entry = {frame = frame, default = frame.Position, userMoved = false}
         self.dragItems[#self.dragItems + 1] = entry
         handle.Active = true
         self:_connect(frame:GetPropertyChangedSignal("AbsoluteSize"), function()
@@ -826,6 +833,7 @@ local UI = (function()
             entry.origin = frame.Position
             entry.touch = input.UserInputType == Enum.UserInputType.Touch and input or nil
             entry.target = nil
+            entry.userMoved = true
             self.dragging = entry
             self:ClosePopup()
         end)
@@ -888,16 +896,27 @@ local UI = (function()
         self.keybindPanel.Size = UDim2.fromOffset(240, keybindHeight)
         self.modPanel.Size = UDim2.fromOffset(240, modHeight)
 
-        local centerY = 0.5
-        self.keybindPanel.Position = UDim2.new(0, 12, centerY, 0)
-        self.keybindPanel.AnchorPoint = Vector2.new(0, 0.5)
+        if not self._hudInitPos then
+            self._hudInitPos = true
+            self.keybindPanel.AnchorPoint = Vector2.new(0, 0.5)
+            self.keybindPanel.Position = UDim2.new(0, 12, 0.5, 0)
+            
+            self.modPanel.AnchorPoint = Vector2.new(1, 0.5)
+            self.modPanel.Position = UDim2.new(1, -12, 0.5, 0)
+            
+            self.targetHUD.AnchorPoint = Vector2.new(1, 0.5)
+            if not (self.targetDragEntry and self.targetDragEntry.userMoved) then
+                self.targetHUD.Position = UDim2.new(1, -12, 0.5, modHeight / 2 + 55)
+                self._lastModHeight = modHeight
+            end
+        end
 
-        self.modPanel.Position = UDim2.new(1, -12, centerY, 0)
-        self.modPanel.AnchorPoint = Vector2.new(1, 0.5)
-
-        local targetY = modHeight / 2 + 10
-        self.targetHUD.Position = UDim2.new(1, -12, centerY, targetY)
-        self.targetHUD.AnchorPoint = Vector2.new(1, 0.5)
+        if not (self.targetDragEntry and self.targetDragEntry.userMoved) then
+            if self._lastModHeight ~= modHeight then
+                self._lastModHeight = modHeight
+                self.targetHUD.Position = UDim2.new(1, -12, 0.5, modHeight / 2 + 55)
+            end
+        end
 
         self:_fitDraggables()
     end
@@ -1296,6 +1315,10 @@ local UI = (function()
             end
         end
         for _, f in ipairs(self.repaint) do f() end
+
+        if self._targetStatusRole == role and self.targetStatus then
+            self.targetStatus.TextColor3 = color
+        end
     end
 
     function UI:SetAccent(color) self:SetThemeColor("accent", color) end
@@ -1339,8 +1362,16 @@ local UI = (function()
     function UI:ResetPositions()
         self.dragging = nil
         self:ClosePopup()
+        self._hudInitPos = false
+        self._lastModHeight = nil
+        if self.targetDragEntry then
+            self.targetDragEntry.userMoved = false
+        end
+        self:_layoutHUD()
         for _, entry in ipairs(self.dragItems) do
-            entry.target = self:_clampDrag(entry.frame, entry.default)
+            entry.default = entry.frame.Position
+            entry.userMoved = false
+            entry.target = nil
         end
     end
 
@@ -1700,6 +1731,7 @@ local UI = (function()
         self.selectedPage = page
         self.selectedTab = tab
         page.lastTab = tab
+        self.keybindDirty = true
         self.selectToken = (self.selectToken or 0) + 1
         local pageChanged = old and old.page ~= page
         local direction = 1
