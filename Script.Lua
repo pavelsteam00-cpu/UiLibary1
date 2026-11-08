@@ -1,4 +1,3 @@
-```
 local UI = (function()
     local Players       = game:GetService("Players")
     local Teams         = game:GetService("Teams")
@@ -4040,4 +4039,3 @@ local UI = (function()
 end)()
 
 return UI
-```
