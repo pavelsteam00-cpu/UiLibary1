@@ -3279,12 +3279,12 @@ local UI = (function()
                     }, self.Attachments)
                     gear.Parent = wrapper
                     gear.AnchorPoint = Vector2.new(0, 0)
-                    gear.Position = UDim2.new(0, 0, 0, 2)
+                    gear.Position = UDim2.new(0, 0, 0, 1)
                     gear.Size = UDim2.fromScale(1, 1)
                 else
                     gear.Parent = self.Instance
                     gear.AnchorPoint = Vector2.new(1, 0.5)
-                    gear.Position = UDim2.new(1, -22, 0.5, 6)
+                    gear.Position = UDim2.new(1, -22, 0.5, 5)
                 end
 
                 local icon, tint = section.ui:_icon(gear, "settings", 17)
