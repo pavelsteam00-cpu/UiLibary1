@@ -458,44 +458,63 @@ local UI = (function()
         self.watermarkStats.Size = UDim2.new(1, -132, 1, 0)
         self.watermarkStats.TextTruncate = Enum.TextTruncate.AtEnd
 
-        local tPanel, tHeader = self:_hudCard("TargetHUD", UDim2.new(1, -12, .5, 0), Vector2.new(1, .5), 240, 80)
+        -- Larger Target HUD with balanced spacing and a more readable avatar.
+        local targetHUDWidth, targetHUDHeight = 280, 116
+        local tPanel, tHeader = self:_hudCard(
+            "TargetHUD", UDim2.new(1, -12, .5, 0), Vector2.new(1, .5),
+            targetHUDWidth, targetHUDHeight
+        )
         self.targetHUD = tPanel
         self.targetHUD.Visible = self.targetHUDEnabled
+        self.targetHUDHeight = targetHUDHeight
 
-        local tIcon = self:_frame(tHeader, { BackgroundTransparency = 1, Position = UDim2.fromOffset(12, 9), Size = UDim2.fromOffset(14, 14) })
+        local tIcon = self:_frame(tHeader, {
+            BackgroundTransparency = 1,
+            Position = UDim2.fromOffset(12, 9),
+            Size = UDim2.fromOffset(14, 14),
+        })
         self:_icon(tIcon, "person", 14, "accent")
-        
+
         local tTitle = self:_text(tHeader, "Target HUD")
         tTitle.Position = UDim2.fromOffset(34, 0)
         tTitle.Size = UDim2.new(1, -46, 1, 0)
 
         self.targetAvatar = create("ImageLabel", {
             BackgroundColor3 = Color3.fromRGB(20, 20, 20),
-            BorderSizePixel = 0, Position = UDim2.fromOffset(10, 36),
-            Size = UDim2.fromOffset(28, 28),
+            BorderSizePixel = 0,
+            Position = UDim2.fromOffset(12, 44),
+            Size = UDim2.fromOffset(52, 52),
+            ScaleType = Enum.ScaleType.Crop,
         }, self.targetHUD)
-        round(self.targetAvatar, 4)
+        round(self.targetAvatar, 7)
         self:_stroke(self.targetAvatar, "outline", 0.5)
         self.targetAvatar.Visible = false
 
-        self.targetName = self:_text(self.targetHUD, "Player: None", 11, "text")
-        self.targetName.Position = UDim2.fromOffset(44, 36)
-        self.targetName.Size = UDim2.new(1, -54, 0, 16)
+        self.targetName = self:_text(self.targetHUD, "Player: None", 12, "text")
+        self.targetName.Position = UDim2.fromOffset(76, 44)
+        self.targetName.Size = UDim2.new(1, -88, 0, 20)
+        self.targetName.TextTruncate = Enum.TextTruncate.AtEnd
 
         self.targetStatus = self:_text(self.targetHUD, "Status: None", 11, "muted")
-        self.targetStatus.Position = UDim2.fromOffset(44, 52)
-        self.targetStatus.Size = UDim2.new(1, -54, 0, 16)
+        self.targetStatus.Position = UDim2.fromOffset(76, 67)
+        self.targetStatus.Size = UDim2.new(1, -88, 0, 18)
+        self.targetStatus.TextTruncate = Enum.TextTruncate.AtEnd
 
         self.targetHealthBg = self:_frame(self.targetHUD, {
-            BorderSizePixel = 0, Position = UDim2.fromOffset(44, 70),
-            Size = UDim2.new(1, -54, 0, 6),
+            BorderSizePixel = 0,
+            ClipsDescendants = true,
+            Position = UDim2.fromOffset(76, 92),
+            Size = UDim2.new(1, -88, 0, 8),
         }, "raised")
+        round(self.targetHealthBg, 4)
         self:_stroke(self.targetHealthBg, "outline", 0.5)
 
         self.targetHealthBar = self:_frame(self.targetHealthBg, {
-            BorderSizePixel = 0, Size = UDim2.new(0, 0, 1, 0),
+            BorderSizePixel = 0,
+            Size = UDim2.new(0, 0, 1, 0),
         })
         self.targetHealthBar.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
+        round(self.targetHealthBar, 4)
 
         local panel, header = self:_hudCard("Keybinds", UDim2.new(0, 12, .5, 0), Vector2.new(0, .5), 240, 40)
         self.keybindPanel = panel
@@ -780,7 +799,6 @@ local UI = (function()
         end
 
         self.modBody.CanvasSize = UDim2.fromOffset(0, #mods * 24)
-        self.modBody.Size = UDim2.new(1, 0, 1, -36)
         self:_layoutHUD()
     end
 
@@ -889,16 +907,24 @@ local UI = (function()
         self.watermarkStats.Position = UDim2.fromOffset(36 + brand, 0)
         self.watermarkStats.Size = UDim2.fromOffset(stats, 32)
 
-        local listHeight = math.clamp((self.keybindVisibleCount or 0) * 24, 24, 200)
-        local keybindHeight = listHeight + 40
-        -- Keep both side panels aligned to the same height.
-        local modHeight = keybindHeight
+        -- Keybinds and Moderators use separate content counts. Resizing one
+        -- panel must never resize the other panel.
+        local keybindListHeight = math.clamp((self.keybindVisibleCount or 0) * 24, 24, 200)
+        local keybindHeight = keybindListHeight + 40
+
+        local moderatorCount = math.max(1, self.modListCount or 1)
+        local moderatorListHeight = math.clamp(moderatorCount * 24, 24, 200)
+        local modHeight = moderatorListHeight + 40
 
         self.keybindPanel.Size = UDim2.fromOffset(240, keybindHeight)
-        self.keybindBody.Size = UDim2.new(1, 0, 0, listHeight)
-        self.keybindBody.CanvasSize = UDim2.fromOffset(0, math.max(24, (self.keybindVisibleCount or 0) * 24))
+        self.keybindBody.Size = UDim2.new(1, 0, 0, keybindListHeight)
+        self.keybindBody.CanvasSize = UDim2.fromOffset(
+            0, math.max(24, (self.keybindVisibleCount or 0) * 24)
+        )
+
         self.modPanel.Size = UDim2.fromOffset(240, modHeight)
-        self.modBody.Size = UDim2.new(1, 0, 1, -36)
+        self.modBody.Size = UDim2.new(1, 0, 0, moderatorListHeight)
+        self.modBody.CanvasSize = UDim2.fromOffset(0, moderatorCount * 24)
 
         if not self._hudInitPos then
             self._hudInitPos = true
@@ -910,7 +936,10 @@ local UI = (function()
             
             self.targetHUD.AnchorPoint = Vector2.new(1, 0.5)
             if not (self.targetDragEntry and self.targetDragEntry.userMoved) then
-                self.targetHUD.Position = UDim2.new(1, -12, 0.5, modHeight / 2 + 52)
+                self.targetHUD.Position = UDim2.new(
+                    1, -12, 0.5,
+                    modHeight / 2 + (self.targetHUDHeight or 116) / 2 + 12
+                )
                 self._lastModHeight = modHeight
             end
         end
@@ -918,7 +947,10 @@ local UI = (function()
         if not (self.targetDragEntry and self.targetDragEntry.userMoved) then
             if self._lastModHeight ~= modHeight then
                 self._lastModHeight = modHeight
-                self.targetHUD.Position = UDim2.new(1, -12, 0.5, modHeight / 2 + 52)
+                self.targetHUD.Position = UDim2.new(
+                    1, -12, 0.5,
+                    modHeight / 2 + (self.targetHUDHeight or 116) / 2 + 12
+                )
             end
         end
 
@@ -4033,7 +4065,7 @@ local UI = (function()
     end
 
     UI.Section = Section
-    UI.Version = "2.1.0"
+    UI.Version = "2.1.1"
     UI.Description = "SkidUi interface library"
     return UI
 end)()
