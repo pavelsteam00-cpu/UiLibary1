@@ -458,8 +458,7 @@ local UI = (function()
         self.watermarkStats.Size = UDim2.new(1, -132, 1, 0)
         self.watermarkStats.TextTruncate = Enum.TextTruncate.AtEnd
 
-        -- Larger Target HUD with balanced spacing and a more readable avatar.
-        local targetHUDWidth, targetHUDHeight = 280, 116
+        local targetHUDWidth, targetHUDHeight = 240, 92
         local tPanel, tHeader = self:_hudCard(
             "TargetHUD", UDim2.new(1, -12, .5, 0), Vector2.new(1, .5),
             targetHUDWidth, targetHUDHeight
@@ -482,8 +481,8 @@ local UI = (function()
         self.targetAvatar = create("ImageLabel", {
             BackgroundColor3 = Color3.fromRGB(20, 20, 20),
             BorderSizePixel = 0,
-            Position = UDim2.fromOffset(12, 44),
-            Size = UDim2.fromOffset(52, 52),
+            Position = UDim2.fromOffset(12, 40),
+            Size = UDim2.fromOffset(44, 44),
             ScaleType = Enum.ScaleType.Crop,
         }, self.targetHUD)
         round(self.targetAvatar, 7)
@@ -491,20 +490,20 @@ local UI = (function()
         self.targetAvatar.Visible = false
 
         self.targetName = self:_text(self.targetHUD, "Player: None", 12, "text")
-        self.targetName.Position = UDim2.fromOffset(76, 44)
-        self.targetName.Size = UDim2.new(1, -88, 0, 20)
+        self.targetName.Position = UDim2.fromOffset(66, 36)
+        self.targetName.Size = UDim2.new(1, -78, 0, 18)
         self.targetName.TextTruncate = Enum.TextTruncate.AtEnd
 
         self.targetStatus = self:_text(self.targetHUD, "Status: None", 11, "muted")
-        self.targetStatus.Position = UDim2.fromOffset(76, 67)
-        self.targetStatus.Size = UDim2.new(1, -88, 0, 18)
+        self.targetStatus.Position = UDim2.fromOffset(66, 54)
+        self.targetStatus.Size = UDim2.new(1, -78, 0, 18)
         self.targetStatus.TextTruncate = Enum.TextTruncate.AtEnd
 
         self.targetHealthBg = self:_frame(self.targetHUD, {
             BorderSizePixel = 0,
             ClipsDescendants = true,
-            Position = UDim2.fromOffset(76, 92),
-            Size = UDim2.new(1, -88, 0, 8),
+            Position = UDim2.fromOffset(66, 76),
+            Size = UDim2.new(1, -78, 0, 8),
         }, "raised")
         round(self.targetHealthBg, 4)
         self:_stroke(self.targetHealthBg, "outline", 0.5)
@@ -773,6 +772,10 @@ local UI = (function()
     function UI:SetModerators(list)
         if self.destroyed then return end
         list = list or {}
+        local key = table.concat(list, "\0")
+        if self._lastModeratorsKey == key then return end
+        self._lastModeratorsKey = key
+
         for _, x in ipairs(self.modBody:GetChildren()) do
             if x:IsA("GuiObject") then x:Destroy() end
         end
@@ -866,8 +869,6 @@ local UI = (function()
     end
 
     function UI:_stepDraggables(dt)
-        -- HUD panels follow the pointer directly. Interpolating every frame
-        -- caused visible lag/jitter when the user moved a panel.
         for _, entry in ipairs(self.dragItems) do
             local target = entry.target
             local frame = entry.frame
@@ -907,8 +908,6 @@ local UI = (function()
         self.watermarkStats.Position = UDim2.fromOffset(36 + brand, 0)
         self.watermarkStats.Size = UDim2.fromOffset(stats, 32)
 
-        -- Keybinds and Moderators use separate content counts. Resizing one
-        -- panel must never resize the other panel.
         local keybindListHeight = math.clamp((self.keybindVisibleCount or 0) * 24, 24, 200)
         local keybindHeight = keybindListHeight + 40
 
@@ -938,7 +937,7 @@ local UI = (function()
             if not (self.targetDragEntry and self.targetDragEntry.userMoved) then
                 self.targetHUD.Position = UDim2.new(
                     1, -12, 0.5,
-                    modHeight / 2 + (self.targetHUDHeight or 116) / 2 + 12
+                    modHeight / 2 + (self.targetHUDHeight or 92) / 2 + 12
                 )
                 self._lastModHeight = modHeight
             end
@@ -949,7 +948,7 @@ local UI = (function()
                 self._lastModHeight = modHeight
                 self.targetHUD.Position = UDim2.new(
                     1, -12, 0.5,
-                    modHeight / 2 + (self.targetHUDHeight or 116) / 2 + 12
+                    modHeight / 2 + (self.targetHUDHeight or 92) / 2 + 12
                 )
             end
         end
@@ -3270,13 +3269,22 @@ local UI = (function()
                 local gear = create("TextButton", {
                     Text = "", BackgroundTransparency = 1,
                     Size = UDim2.fromOffset(22, 22),
-                }, self.Attachments or self.Instance)
-                
+                }, nil)
+
                 if self.Attachments then
-                    gear.LayoutOrder = 100
+                    local wrapper = create("Frame", {
+                        BackgroundTransparency = 1,
+                        Size = UDim2.fromOffset(22, 22),
+                        LayoutOrder = 100,
+                    }, self.Attachments)
+                    gear.Parent = wrapper
+                    gear.AnchorPoint = Vector2.new(0, 0)
+                    gear.Position = UDim2.new(0, 0, 0, 2)
+                    gear.Size = UDim2.fromScale(1, 1)
                 else
+                    gear.Parent = self.Instance
                     gear.AnchorPoint = Vector2.new(1, 0.5)
-                    gear.Position = UDim2.new(1, -22, 0.5, 4)
+                    gear.Position = UDim2.new(1, -22, 0.5, 6)
                 end
 
                 local icon, tint = section.ui:_icon(gear, "settings", 17)
