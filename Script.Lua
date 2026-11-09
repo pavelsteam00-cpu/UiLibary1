@@ -4361,7 +4361,7 @@ local UI = (function()
     end
 
     UI.Section = Section
-    UI.Version = "2.1.4"
+    UI.Version = "2.1.5"
     UI.Description = "SkidUi interface library"
     return UI
 end)()
