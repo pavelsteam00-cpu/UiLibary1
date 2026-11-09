@@ -1,5 +1,4 @@
--- Ui 
-
+-- Ui
 
 local UI = (function()
     local Players       = game:GetService("Players")
@@ -2842,16 +2841,17 @@ local UI = (function()
             safe(function()
                 base = Color3.fromHSV(h, s, v)
                 cachedMode = computeMode()
-                local swatchT = (1 - alpha) * 0.5
-                if silent then 
-                    swatch.BackgroundColor3 = current()
-                    swatch.BackgroundTransparency = swatchT
-                else 
-                    ui:_tween(swatch, {BackgroundColor3 = current(), BackgroundTransparency = swatchT}, .12, Enum.EasingStyle.Sine) 
+                local col = current()
+                local trans = 1 - alpha
+                if silent then
+                    swatch.BackgroundColor3 = col
+                    swatch.BackgroundTransparency = trans
+                else
+                    ui:_tween(swatch, {BackgroundColor3 = col, BackgroundTransparency = trans}, .12, Enum.EasingStyle.Sine)
                 end
                 if refresh and popup.Visible then refresh() end
                 paintModes()
-                if not silent then invoke(options.Callback, current(), alpha, cachedMode) end
+                if not silent then invoke(options.Callback, col, alpha, cachedMode) end
             end)
         end
 
@@ -3040,7 +3040,7 @@ local UI = (function()
             safe(function()
                 local c = current()
                 swatch.BackgroundColor3 = c
-                swatch.BackgroundTransparency = (1 - alpha) * 0.5
+                swatch.BackgroundTransparency = 1 - alpha
                 alphaBar.BackgroundColor3 = c
                 invoke(options.Callback, c, alpha, cachedMode)
             end)
@@ -3286,7 +3286,7 @@ local UI = (function()
             control.Value = self:_publicValue(control, kind, nil, options)
             if kind == "Color" and control.Get then
                 local colorData = control:Get()
-                local alpha = type(colorData) == "table" and (colorData.a or 1) or 1
+                local alpha = type(colorData) == "table" and colorData.a or 1
                 control.Transparency = options._usesTransparency and (1 - alpha) or alpha
             end
             control._changedCallbacks = control._changedCallbacks or {}
@@ -3364,7 +3364,7 @@ local UI = (function()
                         value = {args[1], args[2]}
                     elseif kind == "Color" then
                         value = args[1]
-                        control.Transparency = options._usesTransparency and (1 - (args[2] or 1)) or (args[2] or 1)
+                        control.Transparency = options._usesTransparency and (1 - (args[2] or 1)) or args[2]
                         control.Mode = args[3]
                     elseif kind == "Dropdown" and options.Multi then
                         value = self:_publicValue(control, kind, args[1], options)
@@ -4361,7 +4361,7 @@ local UI = (function()
     end
 
     UI.Section = Section
-    UI.Version = "1.0.0"
+    UI.Version = "2.1.4"
     UI.Description = "SkidUi interface library"
     return UI
 end)()
