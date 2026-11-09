@@ -2423,9 +2423,9 @@ local UI = (function()
             ui:_tween(b, {TextColor3 = ui.accent}, .18)
         end
 
-        local modePopup = ui:_makePopup(140, 128)
-        create("UIListLayout", {Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder}, modePopup)
-        pad(modePopup, 6, 6, 6, 6)
+        local modePopup = ui:_makePopup(140, 140)
+        create("UIListLayout", {Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder}, modePopup)
+        pad(modePopup, 8, 8, 8, 8)
         local modeOptions = {
             {name = "Always", apply = function() obj:Reset(); obj.Mode = "Always"; ui.keybindDirty = true; ui:Notify("Mode: Always") end},
             {name = "Toggle", apply = function() obj:Reset(); obj.Mode = "Toggle"; ui.keybindDirty = true; ui:Notify("Mode: Toggle") end},
@@ -2434,7 +2434,7 @@ local UI = (function()
         }
         for i, entry in ipairs(modeOptions) do
             local btn = ui:_button(modePopup, entry.name)
-            btn.Size = UDim2.new(1, 0, 0, 24)
+            btn.Size = UDim2.new(1, 0, 0, 26)
             btn.LayoutOrder = i
             btn.Activated:Connect(function()
                 safe(function()
@@ -2463,7 +2463,7 @@ local UI = (function()
         end)
         connect(b.InputBegan, function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton2 then
-                ui:_openPopup(b, modePopup, 140, 128, self.popupOwner)
+                ui:_openPopup(b, modePopup, 140, 140, self.popupOwner)
             end
         end)
 
