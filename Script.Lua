@@ -3286,7 +3286,7 @@ local UI = (function()
             control.Value = self:_publicValue(control, kind, nil, options)
             if kind == "Color" and control.Get then
                 local colorData = control:Get()
-                local alpha = type(colorData) == "table" and colorData.a or 1
+                local alpha = type(colorData) == "table" and (colorData.a or 1) or 1
                 control.Transparency = options._usesTransparency and (1 - alpha) or alpha
             end
             control._changedCallbacks = control._changedCallbacks or {}
@@ -3364,7 +3364,7 @@ local UI = (function()
                         value = {args[1], args[2]}
                     elseif kind == "Color" then
                         value = args[1]
-                        control.Transparency = options._usesTransparency and (1 - (args[2] or 1)) or args[2]
+                        control.Transparency = options._usesTransparency and (1 - (args[2] or 1)) or (args[2] or 1)
                         control.Mode = args[3]
                     elseif kind == "Dropdown" and options.Multi then
                         value = self:_publicValue(control, kind, args[1], options)
