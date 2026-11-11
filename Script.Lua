@@ -2059,50 +2059,33 @@ local UI = (function()
         caption.Position = UDim2.fromOffset(42, 0)
         caption.Size = UDim2.new(1, -42, 1, 0)
 
-        local ATT_COLOR_W, ATT_KEY_W, ATT_GEAR_W, ATT_GAP = 22, 80, 22, 4
         local attachments = ui:_frame(row, {
             BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5),
             Position = UDim2.new(1, 0, 0.5, 0),
-            Size = UDim2.fromOffset(0, 22),
+            Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X,
             ClipsDescendants = false,
         })
+        create("UIListLayout", {
+            FillDirection = Enum.FillDirection.Horizontal,
+            HorizontalAlignment = Enum.HorizontalAlignment.Right,
+            VerticalAlignment = Enum.VerticalAlignment.Center,
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Padding = UDim.new(0, 8),
+        }, attachments)
+        
         caption.TextTruncate = Enum.TextTruncate.AtEnd
-        caption.Size = UDim2.new(1, -50, 1, 0)
+        attachments:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+            safe(function()
+                caption.Size = UDim2.new(1, -(attachments.AbsoluteSize.X + 50), 1, 0)
+            end)
+        end)
 
         local state, initialized = false, false
         local obj = {
             Instance = row, Button = track, Caption = caption, Attachments = attachments,
             ColorPickers = {},
-            _att = { colorW = ATT_COLOR_W, keyW = ATT_KEY_W, gearW = ATT_GEAR_W, gap = ATT_GAP },
         }
-        function obj:_relayoutAttachments()
-            local gap = ATT_GAP
-            local x = 0
-            local function place(inst, width, height)
-                if not inst then return end
-                if x > 0 then x = x + gap end
-                inst.AnchorPoint = Vector2.new(1, 0.5)
-                inst.Position = UDim2.new(1, -x, 0.5, 0)
-                inst.Size = UDim2.fromOffset(width, height or 22)
-                x = x + width
-            end
-            if self.GearWrapper then
-                place(self.GearWrapper, ATT_GEAR_W, 22)
-            end
-            if self.KeyPicker and self.KeyPicker.Instance then
-                place(self.KeyPicker.Instance, ATT_KEY_W, 22)
-            end
-            if self.ColorPickers then
-                for i = #self.ColorPickers, 1, -1 do
-                    local cp = self.ColorPickers[i]
-                    if cp and cp.Instance then
-                        place(cp.Instance, ATT_COLOR_W, 22)
-                    end
-                end
-            end
-            attachments.Size = UDim2.fromOffset(x, 22)
-            caption.Size = UDim2.new(1, -42 - x - 10, 1, 0)
-        end
+
         local function paint(instant)
             safe(function()
                 local p = {
@@ -2987,26 +2970,26 @@ local UI = (function()
 
         local hue = ui:_frame(popup, {
             BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0,
-            Position = UDim2.fromOffset(211, 10),
-            Size = UDim2.fromOffset(18, 168), Active = true,
+            Position = UDim2.fromOffset(10, 190),
+            Size = UDim2.fromOffset(219, 15), Active = true,
         })
         round(hue, 4)
         local hueColors = {}
         for i = 0, 6 do
             table.insert(hueColors, ColorSequenceKeypoint.new(i / 6, Color3.fromHSV(i / 6, 1, 1)))
         end
-        create("UIGradient", {Rotation = 90, Color = ColorSequence.new(hueColors)}, hue)
+        create("UIGradient", {Rotation = 0, Color = ColorSequence.new(hueColors)}, hue)
         local hueMarker = ui:_frame(hue, {
             BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.1,
             BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, .5),
             Size = UDim2.fromOffset(14, 14), ZIndex = 5, Active = false,
         })
-        hueMarker.Position = UDim2.fromScale(0.5, 0)
+        hueMarker.Position = UDim2.fromScale(0, 0.5)
         pill(hueMarker)
         ui:_stroke(hueMarker, "ink", 0).Thickness = 1.5
 
         local alphaBar = ui:_frame(popup, {
-            BorderSizePixel = 0, Position = UDim2.fromOffset(10, 190),
+            BorderSizePixel = 0, Position = UDim2.fromOffset(10, 215),
             Size = UDim2.fromOffset(219, 15), Active = true,
         })
         round(alphaBar, 4)
@@ -3023,11 +3006,11 @@ local UI = (function()
         ui:_stroke(am, "ink", 0).Thickness = 1.5
 
         local rgb = ui:_input(popup, "R, G, B, A", "")
-        rgb.Position = UDim2.fromOffset(10, 216)
+        rgb.Position = UDim2.fromOffset(10, 240)
         rgb.Size = UDim2.fromOffset(219, 28)
 
         local modeButton = ui:_button(popup, "Static")
-        modeButton.Position = UDim2.fromOffset(10, 256)
+        modeButton.Position = UDim2.fromOffset(10, 280)
         modeButton.Size = UDim2.fromOffset(219, 28)
         modeButton.TextXAlignment = Enum.TextXAlignment.Left
         pad(modeButton, 10, 28)
@@ -3059,7 +3042,7 @@ local UI = (function()
             safe(function()
                 sat.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromHSV(h, 1, 1))
                 ui:_tween(marker, {Position = UDim2.fromScale(s, 1 - v)}, .15, Enum.EasingStyle.Sine)
-                ui:_tween(hueMarker, {Position = UDim2.fromScale(0.5, h)}, .15, Enum.EasingStyle.Sine)
+                ui:_tween(hueMarker, {Position = UDim2.fromScale(h, 0.5)}, .15, Enum.EasingStyle.Sine)
                 ui:_tween(am, {Position = UDim2.fromScale(alpha, 0.5)}, .15, Enum.EasingStyle.Sine)
                 ui:_tween(alphaBar, {BackgroundColor3 = current()}, .2, Enum.EasingStyle.Sine)
                 if not rgb:IsFocused() then
@@ -3078,7 +3061,7 @@ local UI = (function()
                     s = math.clamp((input.Position.X - square.AbsolutePosition.X) / square.AbsoluteSize.X, 0, 1)
                     v = 1 - math.clamp((input.Position.Y - square.AbsolutePosition.Y) / square.AbsoluteSize.Y, 0, 1)
                 elseif active == "hue" then
-                    h = math.clamp((input.Position.Y - hue.AbsolutePosition.Y) / hue.AbsoluteSize.Y, 0, 1)
+                    h = math.clamp((input.Position.X - hue.AbsolutePosition.X) / hue.AbsoluteSize.X, 0, 1)
                 elseif active == "alpha" then
                     alpha = math.clamp((input.Position.X - alphaBar.AbsolutePosition.X) / alphaBar.AbsoluteSize.X, 0, 1)
                 end
@@ -3143,7 +3126,7 @@ local UI = (function()
                     local vv = fading and v * (.6 + .4 * (math.sin(os.clock() * 2) + 1) / 2) or v
                     sat.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromHSV(hh, 1, 1))
                     marker.Position = UDim2.fromScale(s, 1 - vv)
-                    hueMarker.Position = UDim2.fromScale(0.5, hh)
+                    hueMarker.Position = UDim2.fromScale(hh, 0.5)
                     am.Position = UDim2.fromScale(alpha, 0.5)
                 end
                 invoke(options.Callback, c, alpha, cachedMode)
@@ -3596,6 +3579,7 @@ local UI = (function()
                         color.Instance.Parent = self.Attachments
                         color.Instance.BackgroundTransparency = 1
                         color.Instance.Size = UDim2.fromOffset(22, 22)
+                        color.Instance.LayoutOrder = 1
                         for _, child in ipairs(color.Instance:GetDescendants()) do
                             if child:IsA("TextLabel") then child.Visible = false end
                         end
@@ -3604,7 +3588,6 @@ local UI = (function()
                             color.Swatch.Position = UDim2.fromScale(0.5, 0.5)
                             color.Swatch.Size = UDim2.fromOffset(18, 18)
                         end
-                        if self._relayoutAttachments then self:_relayoutAttachments() end
                         if section.Resize then safe(function() section:Resize() end) end
                     else
                         color.Instance.Parent = self.Instance
@@ -3621,9 +3604,8 @@ local UI = (function()
                         if self.Attachments then
                             keybind.Instance.Parent = self.Attachments
                             keybind.Instance.BackgroundTransparency = 1
-                            keybind.Instance.Size = UDim2.fromOffset(80, 22)
-                            keybind.Instance.AnchorPoint = Vector2.new(1, 0.5)
-                            keybind.Instance.Position = UDim2.new(1, 0, 0.5, 0)
+                            keybind.Instance.Size = UDim2.fromOffset(64, 22)
+                            keybind.Instance.LayoutOrder = 2
                             if keybind.Button then
                                 keybind.Button.BackgroundTransparency = 1
                                 keybind.Button.TextXAlignment = Enum.TextXAlignment.Right
@@ -3633,7 +3615,6 @@ local UI = (function()
                                 local ks = keybind.Button:FindFirstChildOfClass("UIStroke")
                                 if ks then ks.Transparency = 1 end
                             end
-                            if self._relayoutAttachments then self:_relayoutAttachments() end
                         else
                             keybind.Instance.Parent = self.Instance
                             keybind.Instance.Size = UDim2.fromOffset(80, 24)
@@ -3666,6 +3647,7 @@ local UI = (function()
                             Size = UDim2.fromOffset(22, 22),
                             ZIndex = 6,
                         }, self.Attachments)
+                        wrapper.LayoutOrder = 3
                         gear.Parent = wrapper
                         gear.AnchorPoint = Vector2.new(0.5, 0.5)
                         gear.Position = UDim2.fromScale(0.5, 0.5)
@@ -3673,7 +3655,6 @@ local UI = (function()
                         gear.ZIndex = 7
                         gear.Active = true
                         self.GearWrapper = wrapper
-                        if self._relayoutAttachments then self:_relayoutAttachments() end
                     else
                         gear.Parent = self.Instance
                         gear.AnchorPoint = Vector2.new(1, 0.5)
