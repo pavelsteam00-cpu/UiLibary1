@@ -2050,8 +2050,8 @@ local UI = (function()
         }, "muted")
         pill(thumb)
         local caption = ui:_text(row, options.Text or "Toggle")
-        caption.Position = UDim2.fromOffset(34, 0)
-        caption.Size = UDim2.new(1, -34, 1, 0)
+        caption.Position = UDim2.fromOffset(42, 0)
+        caption.Size = UDim2.new(1, -42, 1, 0)
 
         local attachments = ui:_frame(row, {
             BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5),
@@ -2066,7 +2066,7 @@ local UI = (function()
             Padding = UDim.new(0, 6),
         }, attachments)
         attLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-            safe(function() caption.Size = UDim2.new(1, -34 - attachments.AbsoluteSize.X, 1, 0) end)
+            safe(function() caption.Size = UDim2.new(1, -42 - attachments.AbsoluteSize.X, 1, 0) end)
         end)
 
         local state, initialized = false, false
@@ -2954,7 +2954,10 @@ local UI = (function()
                 safe(function()
                     if nameCopy == "Rainbow" then rainbow = not rainbow
                     else fading = not fading end
+                    cachedMode = computeMode()
+                    paintModes()
                     changed(false)
+                    refresh()
                 end)
             end)
         end
@@ -3490,9 +3493,25 @@ local UI = (function()
                     if childOptions and childOptions.SyncToggleState and self.Kind == "Toggle" then
                         if self.Attachments then
                             keybind.Instance.Parent = self.Attachments
-                            keybind.Instance.Size = UDim2.fromOffset(70, 22)
+                            keybind.Instance.Size = UDim2.fromOffset(64, 22)
                             keybind.Instance.LayoutOrder = 50
                             keybind.Instance.BackgroundTransparency = 1
+                            if keybind.Button then
+                                keybind.Button.BackgroundColor3 = section.ui.colors.panel
+                                keybind.Button.BackgroundTransparency = 0.1
+                                local ks = keybind.Button:FindFirstChildOfClass("UIStroke")
+                                if not ks then
+                                    ks = section.ui:_stroke(keybind.Button, "accent", 1)
+                                else
+                                    ks.Transparency = 1
+                                end
+                                section.ui:_ownedConnect(keybind.Button, keybind.Button.MouseEnter, function()
+                                    section.ui:_tween(ks, {Transparency = .55}, .18)
+                                end)
+                                section.ui:_ownedConnect(keybind.Button, keybind.Button.MouseLeave, function()
+                                    section.ui:_tween(ks, {Transparency = 1}, .22)
+                                end)
+                            end
                         else
                             keybind.Instance.Parent = self.Instance
                             keybind.Instance.Size = UDim2.fromOffset(94, 24)
@@ -3528,7 +3547,7 @@ local UI = (function()
                         }, self.Attachments)
                         gear.Parent = wrapper
                         gear.AnchorPoint = Vector2.new(0.5, 0.5)
-                        gear.Position = UDim2.new(0.5, 0, 0.5, -4)
+                        gear.Position = UDim2.fromScale(0.5, 0.5)
                         gear.Size = UDim2.fromScale(1, 1)
                     else
                         gear.Parent = self.Instance
@@ -3536,7 +3555,14 @@ local UI = (function()
                         gear.Position = UDim2.new(1, -22, 0.5, 5)
                     end
 
-                    local icon, tint = section.ui:_icon(gear, "settings", 17)
+                    local icon, tint = local _, tint = section.ui:_icon(gear, "settings", 17)
+                    local gearStroke = section.ui:_stroke(gear, "accent", 1)
+                    section.ui:_ownedConnect(self.Instance, gear.MouseEnter, function()
+                        section.ui:_tween(gearStroke, {Transparency = .55}, .18)
+                    end)
+                    section.ui:_ownedConnect(self.Instance, gear.MouseLeave, function()
+                        section.ui:_tween(gearStroke, {Transparency = 1}, .22)
+                    end)
                     local popup = section.ui:_makePopup(250, 45)
                     local items = section.ui:_frame(popup, {
                         BackgroundTransparency = 1, Position = UDim2.fromOffset(8, 8),
@@ -3773,6 +3799,13 @@ local UI = (function()
             function control:SetText(value) return self:Set(value) end
         end
         return control
+    end
+
+    function Section:AddList(index, options)
+        if type(index) == "table" and options == nil then
+            return self:List(index)
+        end
+        return self:_addIndexed("List", index, options, "List")
     end
 
     function Section:AddDivider()
