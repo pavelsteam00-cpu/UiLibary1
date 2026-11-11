@@ -2688,32 +2688,34 @@ local UI = (function()
                         choice.TextTransparency = .6
                         choice.Active = not disabledChoice
                         ui:_tween(choice, {TextTransparency = 0}, .25)
-                        local function paintChoice()
+                        local function paintChoice(hovered)
                             local selected = choice:GetAttribute("Selected") == true
+                            local disabled = choice:GetAttribute("DisabledChoice") == true
                             if selected then
-                                choice.BackgroundColor3 = ui.colors.hover
-                                choice.BackgroundTransparency = 0
-                                choice.TextColor3 = ui.colors.text
+                                ui:_tween(choice, {
+                                    TextColor3 = ui.colors.text,
+                                    BackgroundTransparency = 0,
+                                    BackgroundColor3 = ui.colors.hover,
+                                }, .2)
+                            elseif hovered and not disabled then
+                                ui:_tween(choice, {
+                                    TextColor3 = ui.colors.text,
+                                    BackgroundTransparency = 0.9,
+                                    BackgroundColor3 = ui.colors.hover,
+                                }, .2)
                             else
-                                choice.BackgroundTransparency = 1
-                                choice.TextColor3 = choice:GetAttribute("DisabledChoice") and ui.colors.outline or ui.colors.muted
+                                ui:_tween(choice, {
+                                    TextColor3 = disabled and ui.colors.outline or ui.colors.muted,
+                                    BackgroundTransparency = 1,
+                                    BackgroundColor3 = ui.colors.hover,
+                                }, .2)
                             end
                         end
                         choice.MouseEnter:Connect(function()
-                            safe(function()
-                                if choice:GetAttribute("Selected") == true then
-                                    paintChoice()
-                                elseif not choice:GetAttribute("DisabledChoice") then
-                                    ui:_tween(choice, {
-                                        TextColor3 = ui.colors.text,
-                                        BackgroundTransparency = 0.9,
-                                        BackgroundColor3 = ui.colors.hover,
-                                    }, .2)
-                                end
-                            end)
+                            safe(function() paintChoice(true) end)
                         end)
                         choice.MouseLeave:Connect(function()
-                            safe(function() paintChoice() end)
+                            safe(function() paintChoice(false) end)
                         end)
                         choice.Activated:Connect(function()
                             safe(function()
@@ -2854,35 +2856,34 @@ local UI = (function()
                         b:SetAttribute("ChoiceIndex", i)
                         b.TextTransparency = .5
                         ui:_tween(b, {TextTransparency = 0}, .25)
-                        local function paintChoice()
+                        local function paintChoice(hovered)
                             local selected = b:GetAttribute("Selected") == true
                             if selected then
-                                b.BackgroundColor3 = ui.colors.hover
-                                b.BackgroundTransparency = 0
-                                b.TextColor3 = ui.colors.text
+                                ui:_tween(b, {
+                                    TextColor3 = ui.colors.text,
+                                    BackgroundTransparency = 0,
+                                    BackgroundColor3 = ui.colors.hover,
+                                }, .2)
+                            elseif hovered then
+                                ui:_tween(b, {
+                                    TextColor3 = ui.colors.text,
+                                    BackgroundTransparency = 0.9,
+                                    BackgroundColor3 = ui.colors.hover,
+                                }, .2)
                             else
-                                b.BackgroundTransparency = 1
-                                b.TextColor3 = ui.colors.muted
+                                ui:_tween(b, {
+                                    TextColor3 = ui.colors.muted,
+                                    BackgroundTransparency = 1,
+                                    BackgroundColor3 = ui.colors.hover,
+                                }, .2)
                             end
                         end
                         b.Activated:Connect(function() safe(function() obj:Set(v) end) end)
                         b.MouseEnter:Connect(function()
-                            safe(function()
-                                if b:GetAttribute("Selected") == true then
-                                    paintChoice()
-                                else
-                                    ui:_tween(b, {
-                                        TextColor3 = ui.colors.text,
-                                        BackgroundTransparency = 0.9,
-                                        BackgroundColor3 = ui.colors.hover,
-                                    }, .2)
-                                end
-                            end)
+                            safe(function() paintChoice(true) end)
                         end)
                         b.MouseLeave:Connect(function()
-                            safe(function()
-                                paintChoice()
-                            end)
+                            safe(function() paintChoice(false) end)
                         end)
                     end
                 end
@@ -4587,7 +4588,7 @@ local UI = (function()
     end
 
     UI.Section = Section
-    UI.Version = "2.2.4"
+    UI.Version = "2.2.5"
     UI.Description = "SkidUi interface library"
     return UI
 end)()
