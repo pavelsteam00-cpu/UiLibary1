@@ -576,7 +576,7 @@ local UI = (function()
             BackgroundTransparency = 1, BorderSizePixel = 0,
             ClipsDescendants = true, Position = UDim2.fromOffset(0, 36),
             Size = UDim2.new(1, 0, 0, 0), CanvasSize = UDim2.new(),
-            ScrollBarThickness = 2, AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            ScrollBarThickness = 0, ScrollBarImageTransparency = 1, AutomaticCanvasSize = Enum.AutomaticSize.Y,
         }, panel)
         self:_bind(self.keybindBody, "ScrollBarImageColor3", "accent")
         layout(self.keybindBody, 0)
@@ -597,7 +597,7 @@ local UI = (function()
             BackgroundTransparency = 1, BorderSizePixel = 0,
             ClipsDescendants = true, Position = UDim2.fromOffset(0, 36),
             Size = UDim2.new(1, 0, 1, -36), CanvasSize = UDim2.new(),
-            ScrollBarThickness = 2, AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            ScrollBarThickness = 0, ScrollBarImageTransparency = 1, AutomaticCanvasSize = Enum.AutomaticSize.Y,
         }, self.modPanel)
         self:_bind(self.modBody, "ScrollBarImageColor3", "accent")
         layout(self.modBody, 0)
@@ -1232,7 +1232,8 @@ local UI = (function()
         self.searchBox.AnchorPoint = Vector2.new(1, 0)
         self.searchBox.Position = UDim2.new(1, -12, 0, 11)
         self.searchBox.Size = UDim2.fromOffset(200, 30)
-        self:_bind(self.searchBox, "BackgroundColor3", "background")
+        self.searchBox.BackgroundColor3 = self.colors.raised
+        self:_bind(self.searchBox, "BackgroundColor3", "raised")
         self.searchBox:FindFirstChildOfClass("UIPadding").PaddingLeft = UDim.new(0, 31)
         local si = self:_icon(self.searchBox, "search", 14)
         si.Position = UDim2.new(0, 15, .5, 0)
@@ -1259,9 +1260,10 @@ local UI = (function()
             BackgroundTransparency = 1, BorderSizePixel = 0,
             Size = UDim2.fromScale(1, 1),
             AutomaticCanvasSize = Enum.AutomaticSize.Y,
-            CanvasSize = UDim2.new(), ScrollBarThickness = 2,
+            CanvasSize = UDim2.new(),
+            ScrollBarThickness = 0,
+            ScrollBarImageTransparency = 1,
         }, self.searchPanel)
-        self:_bind(self.searchList, "ScrollBarImageColor3", "accent")
         pad(self.searchList, 10, 10, 7, 7)
         layout(self.searchList, 2)
         self:_connect(self.searchBox:GetPropertyChangedSignal("Text"), function()
@@ -2430,26 +2432,49 @@ local UI = (function()
             ui:_tween(b, {TextColor3 = ui.accent}, .18)
         end
 
-        local modePopup = ui:_makePopup(140, 140)
-        create("UIListLayout", {Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder}, modePopup)
-        pad(modePopup, 8, 8, 8, 8)
+        local MODE_BTN_H, MODE_GAP, MODE_PAD = 26, 6, 8
+        local MODE_VISIBLE = 3
+        local modeHeight = MODE_PAD * 2 + MODE_VISIBLE * MODE_BTN_H + (MODE_VISIBLE - 1) * MODE_GAP
+        local modePopup = ui:_makePopup(140, modeHeight)
+        local modeScroll = create("ScrollingFrame", {
+            BackgroundTransparency = 1, BorderSizePixel = 0,
+            Size = UDim2.fromScale(1, 1),
+            CanvasSize = UDim2.new(),
+            AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            ScrollBarThickness = 0,
+            ScrollBarImageTransparency = 1,
+            ScrollingDirection = Enum.ScrollingDirection.Y,
+        }, modePopup)
+        pad(modeScroll, MODE_PAD, MODE_PAD, MODE_PAD, MODE_PAD)
+        create("UIListLayout", {Padding = UDim.new(0, MODE_GAP), SortOrder = Enum.SortOrder.LayoutOrder}, modeScroll)
         local modeOptions = {
             {name = "Always", apply = function() obj:Reset(); obj.Mode = "Always"; ui.keybindDirty = true; ui:Notify("Mode: Always") end},
             {name = "Toggle", apply = function() obj:Reset(); obj.Mode = "Toggle"; ui.keybindDirty = true; ui:Notify("Mode: Toggle") end},
             {name = "Hold", apply = function() obj:Reset(); obj.Mode = "Hold"; ui.keybindDirty = true; ui:Notify("Mode: Hold") end},
             {name = "Unbind key", apply = function() obj:Set("None") end},
         }
+        local modeButtons = {}
+        local function refreshModeSelection()
+            for name, btn in pairs(modeButtons) do
+                local selected = (name == obj.Mode)
+                btn:SetAttribute("Selected", selected)
+            end
+        end
         for i, entry in ipairs(modeOptions) do
-            local btn = ui:_button(modePopup, entry.name)
-            btn.Size = UDim2.new(1, 0, 0, 26)
+            local btn = ui:_button(modeScroll, entry.name)
+            btn.Size = UDim2.new(1, 0, 0, MODE_BTN_H)
             btn.LayoutOrder = i
+            modeButtons[entry.name] = btn
             btn.Activated:Connect(function()
                 safe(function()
                     entry.apply()
+                    refreshModeSelection()
                     ui:ClosePopup()
                 end)
             end)
         end
+        -- Unbind is not a Mode value; never mark it selected by Mode
+        modeButtons["Unbind key"] = modeButtons["Unbind key"]
 
         local owned = {}
         local function connect(signal, fn)
@@ -2470,7 +2495,7 @@ local UI = (function()
         end)
         connect(b.InputBegan, function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton2 then
-                ui:_openPopup(b, modePopup, 140, 140, self.popupOwner)
+                refreshModeSelection(); ui:_openPopup(b, modePopup, 140, modeHeight, self.popupOwner)
             end
         end)
 
@@ -2519,9 +2544,10 @@ local UI = (function()
             Position = UDim2.fromOffset(6, options.Searchable and 38 or 5),
             Size = UDim2.new(1, -12, 1, options.Searchable and -43 or -10),
             AutomaticCanvasSize = Enum.AutomaticSize.Y,
-            CanvasSize = UDim2.new(), ScrollBarThickness = 2,
+            CanvasSize = UDim2.new(),
+            ScrollBarThickness = 0,
+            ScrollBarImageTransparency = 1,
         }, popup)
-        ui:_bind(entries, "ScrollBarImageColor3", "accent")
         layout(entries, 2)
         local search
         if options.Searchable then
@@ -2694,7 +2720,7 @@ local UI = (function()
             Position = UDim2.fromOffset(0, top),
             Size = UDim2.new(1, 0, 1, -top),
             AutomaticCanvasSize = Enum.AutomaticSize.Y,
-            CanvasSize = UDim2.new(), ScrollBarThickness = 2,
+            CanvasSize = UDim2.new(), ScrollBarThickness = 0, ScrollBarImageTransparency = 1,
         }, row)
         ui:_bind(scroll, "BackgroundColor3", "raised")
         ui:_bind(scroll, "ScrollBarImageColor3", "accent")
@@ -3179,12 +3205,18 @@ local UI = (function()
             Position = UDim2.new(1, -24, 0, 0),
         }, row)
         local icon, tint = ui:_icon(gear, "settings", 17)
-        local popup = ui:_makePopup(250, 45)
-        local items = ui:_frame(popup, {
-            BackgroundTransparency = 1, Position = UDim2.fromOffset(8, 8),
-            Size = UDim2.new(1, -16, 0, 0),
-            AutomaticSize = Enum.AutomaticSize.Y,
-        })
+        local GEAR_H = 16 + 3 * 22 + 2 * 4
+        local popup = ui:_makePopup(250, GEAR_H)
+        local items = create("ScrollingFrame", {
+            BackgroundTransparency = 1, BorderSizePixel = 0,
+            Position = UDim2.fromOffset(8, 8),
+            Size = UDim2.new(1, -16, 1, -16),
+            CanvasSize = UDim2.new(),
+            AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            ScrollBarThickness = 0,
+            ScrollBarImageTransparency = 1,
+            ScrollingDirection = Enum.ScrollingDirection.Y,
+        }, popup)
         local ll = layout(items, 4)
         local gearSection = setmetatable({
             ui = ui, tab = self.tab,
@@ -3196,7 +3228,7 @@ local UI = (function()
         gearSection.reveal = function()
             safe(function()
                 ui:Select(parentSection.tab.page, parentSection.tab)
-                ui:_openPopup(gear, popup, 250, math.max(30, ll.AbsoluteContentSize.Y + 16), parentSection.popupOwner)
+                ui:_openPopup(gear, popup, 250, GEAR_H, parentSection.popupOwner)
             end)
         end
         if options.Build then
@@ -3215,7 +3247,7 @@ local UI = (function()
         end)
         ui:_ownedConnect(row, gear.Activated, function()
             safe(function()
-                ui:_openPopup(gear, popup, 250, math.max(30, ll.AbsoluteContentSize.Y + 16), self.popupOwner)
+                ui:_openPopup(gear, popup, 250, GEAR_H, self.popupOwner)
             end)
         end)
         if toggle then toggle.Gear = gearSection end
@@ -3541,13 +3573,13 @@ local UI = (function()
                 function control:AddSettings(childIndex, childOptions)
                     local gear = create("TextButton", {
                         Text = "", BackgroundTransparency = 1,
-                        Size = UDim2.fromOffset(18, 18),
+                        Size = UDim2.fromOffset(22, 22),
                     }, nil)
 
                     if self.Attachments then
                         local wrapper = create("Frame", {
                             BackgroundTransparency = 1,
-                            Size = UDim2.fromOffset(18, 18),
+                            Size = UDim2.fromOffset(22, 22),
                             LayoutOrder = 100,
                         }, self.Attachments)
                         gear.Parent = wrapper
@@ -3557,15 +3589,23 @@ local UI = (function()
                     else
                         gear.Parent = self.Instance
                         gear.AnchorPoint = Vector2.new(1, 0.5)
-                        gear.Position = UDim2.new(1, -18, 0.5, 0)
+                        gear.Position = UDim2.new(1, -22, 0.5, 0)
                     end
 
-                    local icon, tint = section.ui:_icon(gear, "settings", 14)
-                    local popup = section.ui:_makePopup(250, 45)
-                    local items = section.ui:_frame(popup, {
-                        BackgroundTransparency = 1, Position = UDim2.fromOffset(8, 8),
-                        Size = UDim2.new(1, -16, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
-                    })
+                    local icon, tint = section.ui:_icon(gear, "settings", 17)
+                    -- height for 3 control rows (~22) + gaps(4) + pad(16)
+                    local SETTINGS_H = 16 + 3 * 22 + 2 * 4
+                    local popup = section.ui:_makePopup(250, SETTINGS_H)
+                    local items = create("ScrollingFrame", {
+                        BackgroundTransparency = 1, BorderSizePixel = 0,
+                        Position = UDim2.fromOffset(8, 8),
+                        Size = UDim2.new(1, -16, 1, -16),
+                        CanvasSize = UDim2.new(),
+                        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+                        ScrollBarThickness = 0,
+                        ScrollBarImageTransparency = 1,
+                        ScrollingDirection = Enum.ScrollingDirection.Y,
+                    }, popup)
                     local ll = layout(items, 4)
                     local settingsSection = setmetatable({
                         ui = section.ui, tab = section.tab,
@@ -3576,7 +3616,7 @@ local UI = (function()
                     settingsSection.reveal = function()
                         safe(function()
                             section.ui:Select(section.tab.page, section.tab)
-                            section.ui:_openPopup(gear, popup, 250, math.max(30, ll.AbsoluteContentSize.Y + 16), section.popupOwner)
+                            section.ui:_openPopup(gear, popup, 250, SETTINGS_H, section.popupOwner)
                         end)
                     end
                     childOptions = childOptions or {}
@@ -3593,7 +3633,7 @@ local UI = (function()
                     end)
                     section.ui:_ownedConnect(self.Instance, gear.Activated, function()
                         safe(function()
-                            section.ui:_openPopup(gear, popup, 250, math.max(30, ll.AbsoluteContentSize.Y + 16), section.popupOwner)
+                            section.ui:_openPopup(gear, popup, 250, SETTINGS_H, section.popupOwner)
                         end)
                     end)
                     self.GearButton = gear
@@ -4068,7 +4108,7 @@ local UI = (function()
             Size = UDim2.new(1, -20, 1, -40),
             AutomaticCanvasSize = Enum.AutomaticSize.Y,
             CanvasSize = UDim2.new(),
-            ScrollBarThickness = 2,
+            ScrollBarThickness = 0, ScrollBarImageTransparency = 1,
         }, area)
         ui:_bind(rows, "ScrollBarImageColor3", "accent")
         layout(rows, 5)
@@ -4401,7 +4441,7 @@ local UI = (function()
     end
 
     UI.Section = Section
-    UI.Version = "2.1.7"
+    UI.Version = "2.1.8"
     UI.Description = "SkidUi interface library"
     return UI
 end)()
