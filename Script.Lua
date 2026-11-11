@@ -581,8 +581,8 @@ local UI = (function()
         layout(self.keybindBody, 0)
         
         self.keybindEmpty = self:_text(self.keybindBody, "None", 11, "muted")
-        self.keybindEmpty.Position = UDim2.fromOffset(24, 0)
-        self.keybindEmpty.Size = UDim2.new(1, -34, 0, 24)
+        self.keybindEmpty.Position = UDim2.fromOffset(12, 0)
+        self.keybindEmpty.Size = UDim2.new(1, -24, 0, 24)
         self.keybindEmpty.LayoutOrder = 1
 
         local modPanel, modHeader = self:_hudCard("Moderators", UDim2.new(1, -12, .5, 0), Vector2.new(1, .5), 240, 90)
@@ -854,15 +854,9 @@ local UI = (function()
                     Size = UDim2.new(1, 0, 0, 24),
                     LayoutOrder = i,
                 })
-                local dot = self:_frame(row, {
-                    BorderSizePixel = 0,
-                    Position = UDim2.fromOffset(12, 10),
-                    Size = UDim2.fromOffset(4, 4)
-                }, "outline")
-                pill(dot)
                 local text = self:_text(row, modName)
-                text.Position = UDim2.fromOffset(24, 0)
-                text.Size = UDim2.new(1, -34, 1, 0)
+                text.Position = UDim2.fromOffset(12, 0)
+                text.Size = UDim2.new(1, -24, 1, 0)
             end
 
             self:_layoutHUD()
@@ -949,8 +943,25 @@ local UI = (function()
             local target = entry.target
             local frame = entry.frame
             if target and frame and frame.Parent and shown(frame) then
-                frame.Position = target
-                entry.target = nil
+                local current = frame.Position
+                local targetAbs = Vector2.new(
+                    target.X.Scale * self.viewport.X + target.X.Offset,
+                    target.Y.Scale * self.viewport.Y + target.Y.Offset
+                )
+                local currentAbs = Vector2.new(
+                    current.X.Scale * self.viewport.X + current.X.Offset,
+                    current.Y.Scale * self.viewport.Y + current.Y.Offset
+                )
+                local lerped = currentAbs:Lerp(targetAbs, math.clamp(dt * 15, 0, 1))
+                if (lerped - targetAbs).Magnitude < 1 then
+                    frame.Position = target
+                    entry.target = nil
+                else
+                    frame.Position = UDim2.new(
+                        current.X.Scale, lerped.X - current.X.Scale * self.viewport.X,
+                        current.Y.Scale, lerped.Y - current.Y.Scale * self.viewport.Y
+                    )
+                end
             end
         end
     end
@@ -1544,6 +1555,11 @@ local UI = (function()
             for i = #self.popups, index + 1, -1 do
                 local entry = table.remove(self.popups, i)
                 if entry and entry.panel then
+                    if entry.connections then
+                        for _, c in ipairs(entry.connections) do
+                            pcall(function() c:Disconnect() end)
+                        end
+                    end
                     entry.token = entry.token + 1
                     local token = entry.token
                     entry.panel:SetAttribute("OpenGeneration", token)
@@ -1608,10 +1624,30 @@ local UI = (function()
             panel.Visible = true
             panel.GroupTransparency = 1
             panel.Size = UDim2.fromOffset(width, math.max(0, height - 8))
-            table.insert(self.popups, {
+            
+            local popupEntry = {
                 panel = panel, anchor = anchor, width = width, height = height,
                 open = true, token = entry + 1, onClose = onClose,
-            })
+                connections = {}
+            }
+            
+            local parentScroll = anchor:FindFirstAncestorWhichIsA("ScrollingFrame")
+            if parentScroll then
+                table.insert(popupEntry.connections, self:_connect(parentScroll:GetPropertyChangedSignal("CanvasPosition"), function()
+                    if panel.Parent and panel.Visible then
+                        local layerPosition2 = self.popupLayer.AbsolutePosition
+                        local q2 = (anchor.AbsolutePosition - layerPosition2) / self.scale
+                        local s2 = anchor.AbsoluteSize / self.scale
+                        local x2 = q2.X
+                        if width > s2.X then x2 = q2.X + s2.X - width end
+                        x2 = math.clamp(x2, 6, math.max(6, self.viewport.X - width - 6))
+                        local y2 = q2.Y + s2.Y + 6
+                        self:_tween(panel, {Position = UDim2.fromOffset(x2, y2)}, .1, Enum.EasingStyle.Linear)
+                    end
+                end))
+            end
+            
+            table.insert(self.popups, popupEntry)
             self:_tween(panel, {GroupTransparency = 0, Size = UDim2.fromOffset(width, height)}, .35, Enum.EasingStyle.Quint)
             local stroke = panel:FindFirstChildOfClass("UIStroke")
             if stroke then self:_tween(stroke, {Transparency = .25}, .35) end
@@ -2947,7 +2983,7 @@ local UI = (function()
         local square = ui:_frame(popup, {
             BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0,
             Position = UDim2.fromOffset(10, 10),
-            Size = UDim2.fromOffset(190, 168), Active = true,
+            Size = UDim2.fromOffset(219, 168), Active = true,
         })
         round(square, 4)
         local sat = create("UIGradient", {
