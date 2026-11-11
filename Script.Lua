@@ -2055,24 +2055,27 @@ local UI = (function()
         caption.Position = UDim2.fromOffset(42, 0)
         caption.Size = UDim2.new(1, -42, 1, 0)
 
+        -- Fixed right-side columns: [Color 18][gap][Key 48][gap][Gear 22]
+        local ATT_COLOR_W, ATT_KEY_W, ATT_GEAR_W, ATT_GAP = 18, 48, 22, 6
+        local ATT_WIDTH = ATT_COLOR_W + ATT_GAP + ATT_KEY_W + ATT_GAP + ATT_GEAR_W
         local attachments = ui:_frame(row, {
             BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5),
             Position = UDim2.new(1, 0, 0.5, 0),
-            Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X,
+            Size = UDim2.fromOffset(ATT_WIDTH, 22),
         })
-        local attLayout = create("UIListLayout", {
-            FillDirection = Enum.FillDirection.Horizontal,
-            HorizontalAlignment = Enum.HorizontalAlignment.Right,
-            VerticalAlignment = Enum.VerticalAlignment.Center,
-            SortOrder = Enum.SortOrder.LayoutOrder,
-            Padding = UDim.new(0, 6),
-        }, attachments)
-        attLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-            safe(function() caption.Size = UDim2.new(1, -42 - attachments.AbsoluteSize.X, 1, 0) end)
-        end)
+        caption.Size = UDim2.new(1, -42 - ATT_WIDTH, 1, 0)
 
         local state, initialized = false, false
-        local obj = {Instance = row, Button = track, Caption = caption, Attachments = attachments}
+        local obj = {
+            Instance = row, Button = track, Caption = caption, Attachments = attachments,
+            _att = {
+                colorW = ATT_COLOR_W, keyW = ATT_KEY_W, gearW = ATT_GEAR_W, gap = ATT_GAP, width = ATT_WIDTH,
+                -- offsets of RIGHT edge of each column from parent right
+                gearRight = 0,
+                keyRight = -(ATT_GEAR_W + ATT_GAP),
+                colorRight = -(ATT_GEAR_W + ATT_GAP + ATT_KEY_W + ATT_GAP),
+            },
+        }
         local function paint(instant)
             safe(function()
                 local p = {
@@ -3510,9 +3513,12 @@ local UI = (function()
                     table.insert(self.ColorPickers, color)
 
                     if self.Attachments then
+                        local att = self._att or {}
+                        local w = att.colorW or 18
                         color.Instance.Parent = self.Attachments
-                        color.Instance.Size = UDim2.fromOffset(18, 18)
-                        color.Instance.LayoutOrder = 10 + #self.ColorPickers
+                        color.Instance.AnchorPoint = Vector2.new(1, 0.5)
+                        color.Instance.Position = UDim2.new(1, att.colorRight or -100, 0.5, 0)
+                        color.Instance.Size = UDim2.fromOffset(w, 18)
                         color.Instance.BackgroundTransparency = 1
                         for _, child in ipairs(color.Instance:GetDescendants()) do
                             if child:IsA("TextLabel") then child.Visible = false end
@@ -3536,9 +3542,12 @@ local UI = (function()
                     local keybind = section:_addIndexed("Keybind", childIndex, childOptions, "Keybind", self)
                     if childOptions and childOptions.SyncToggleState and self.Kind == "Toggle" then
                         if self.Attachments then
+                            local att = self._att or {}
+                            local w = att.keyW or 48
                             keybind.Instance.Parent = self.Attachments
-                            keybind.Instance.Size = UDim2.fromOffset(42, 18)
-                            keybind.Instance.LayoutOrder = 50
+                            keybind.Instance.AnchorPoint = Vector2.new(1, 0.5)
+                            keybind.Instance.Position = UDim2.new(1, att.keyRight or -76, 0.5, 0)
+                            keybind.Instance.Size = UDim2.fromOffset(w, 18)
                             keybind.Instance.BackgroundTransparency = 1
                             if keybind.Button then
                                 keybind.Button.BackgroundTransparency = 1
@@ -3577,10 +3586,13 @@ local UI = (function()
                     }, nil)
 
                     if self.Attachments then
+                        local att = self._att or {}
+                        local w = att.gearW or 22
                         local wrapper = create("Frame", {
                             BackgroundTransparency = 1,
-                            Size = UDim2.fromOffset(22, 22),
-                            LayoutOrder = 100,
+                            AnchorPoint = Vector2.new(1, 0.5),
+                            Position = UDim2.new(1, att.gearRight or 0, 0.5, 0),
+                            Size = UDim2.fromOffset(w, 22),
                         }, self.Attachments)
                         gear.Parent = wrapper
                         gear.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -4441,7 +4453,7 @@ local UI = (function()
     end
 
     UI.Section = Section
-    UI.Version = "2.1.8"
+    UI.Version = "2.1.9"
     UI.Description = "SkidUi interface library"
     return UI
 end)()
