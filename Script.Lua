@@ -19,17 +19,18 @@ local UI = (function()
         return ok, err
     end
 
+    -- Строго заданная палитра
     local defaults = {
-        background = Color3.fromRGB(13, 13, 17),
-        sidebar    = Color3.fromRGB(17, 17, 23),
-        panel      = Color3.fromRGB(21, 21, 28),
-        raised     = Color3.fromRGB(30, 30, 38),
-        hover      = Color3.fromRGB(39, 39, 50),
-        text       = Color3.fromRGB(245, 245, 250),
-        muted      = Color3.fromRGB(140, 140, 155),
-        outline    = Color3.fromRGB(38, 38, 48),
-        accent     = Color3.fromRGB(90, 130, 240),
-        ink        = Color3.fromRGB(255, 255, 255),
+        background = Color3.fromRGB(8, 8, 8),
+        sidebar    = Color3.fromRGB(12, 12, 12),
+        panel      = Color3.fromRGB(12, 12, 12),
+        raised     = Color3.fromRGB(19, 19, 19),
+        hover      = Color3.fromRGB(27, 27, 28),
+        text       = Color3.fromRGB(242, 242, 244),
+        muted      = Color3.fromRGB(151, 151, 154),
+        outline    = Color3.fromRGB(26, 26, 29),
+        accent     = Color3.fromRGB(110, 135, 200),
+        ink        = Color3.fromRGB(8, 8, 8),
     }
 
     local iconAssetIds = {
@@ -383,7 +384,7 @@ local UI = (function()
             Text = text or "", TextColor3 = self.colors.text,
             Font = Enum.Font.GothamBlack, TextSize = 13, AutoButtonColor = false,
         }, parent)
-        round(b, 6)
+        round(b, 4)
         self:_bind(b, "TextColor3", "text")
         local outline = self:_stroke(b, "outline", 1)
         local scale = create("UIScale", {Scale = 1}, b)
@@ -441,7 +442,7 @@ local UI = (function()
         self:_bind(x, "BackgroundColor3", role or "background")
         self:_bind(x, "TextColor3", "text")
         self:_bind(x, "PlaceholderColor3", "muted")
-        round(x, 6); pad(x, 12, 10)
+        round(x, 4); pad(x, 12, 10)
         local s = self:_stroke(x, "outline", 0.5)
         self:_connect(x.Focused, function() self:_tween(s, {Transparency = 0, Color = self.colors.accent}, .18) end)
         self:_connect(x.FocusLost, function() self:_tween(s, {Transparency = 0.5, Color = self.colors.outline}, .3) end)
@@ -453,12 +454,12 @@ local UI = (function()
             Name = name, BorderSizePixel = 0, Position = position,
             AnchorPoint = anchor, Size = UDim2.fromOffset(width, height),
         }, "panel")
-        round(panel, 8); self:_stroke(panel, "outline", .15)
+        round(panel, 6); self:_stroke(panel, "outline", .15)
         local header = self:_frame(panel, {
             Name = "Header", BorderSizePixel = 0,
             Size = UDim2.new(1, 0, 0, 32),
         }, "raised")
-        round(header, 8)
+        round(header, 6)
         if height > 32 then
             self:_frame(header, {
                 BorderSizePixel = 0,
@@ -531,7 +532,7 @@ local UI = (function()
             Size = UDim2.fromOffset(44, 44),
             ScaleType = Enum.ScaleType.Crop,
         }, self.targetHUD)
-        round(self.targetAvatar, 8)
+        round(self.targetAvatar, 7)
         self:_stroke(self.targetAvatar, "outline", 0.5)
         self.targetAvatar.Visible = false
 
@@ -1181,23 +1182,14 @@ local UI = (function()
         bindCamera()
         self:_connect(workspace:GetPropertyChangedSignal("CurrentCamera"), bindCamera)
 
-        local shadow = self:_frame(self.root, {
-            BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.6,
-            Size = UDim2.new(1, 24, 1, 24),
-            AnchorPoint = Vector2.new(.5, .5), Position = UDim2.fromScale(.5, .5),
-            ZIndex = 0, Active = false,
-        })
-        round(shadow, 14)
-
         self.window = create("CanvasGroup", {
             BackgroundColor3 = self.colors.background, BorderSizePixel = 0,
             Size = UDim2.fromOffset(self.size.X, self.size.Y),
             AnchorPoint = Vector2.new(.5, .5),
             Position = UDim2.fromScale(.5, .5), GroupTransparency = 1,
-            ZIndex = 2,
         }, self.root)
         self:_bind(self.window, "BackgroundColor3", "background")
-        round(self.window, 10)
+        round(self.window, 6)
         self.windowOutline = self:_stroke(self.window, "outline", .15)
         self.windowScale = create("UIScale", {Scale = 1}, self.window)
 
@@ -1538,7 +1530,7 @@ local UI = (function()
             Size = UDim2.fromOffset(width, height), ClipsDescendants = true,
         }, self.popupLayer)
         self:_bind(x, "BackgroundColor3", "raised")
-        round(x, 8); self:_stroke(x, "outline", .25)
+        round(x, 4); self:_stroke(x, "outline", .25)
         return x
     end
 
@@ -1784,7 +1776,7 @@ local UI = (function()
                 BackgroundTransparency = 1, Size = UDim2.fromOffset(width, 30),
                 LayoutOrder = #self.tabs + 1, Visible = false,
             })
-            tab.glow = ui:_glow(tab.slot, 6)
+            tab.glow = ui:_glow(tab.slot, 4)
             tab.button = ui:_button(tab.slot, name)
             tab.button.TextTruncate = Enum.TextTruncate.AtEnd
             tab.button.Size = UDim2.fromScale(1, 1)
@@ -1843,12 +1835,12 @@ local UI = (function()
                     BorderSizePixel = 0, Size = UDim2.new(1, -1, 0, 60),
                     LayoutOrder = #self.sections + 1,
                 }, "panel")
-                round(holder, 8)
+                round(holder, 6)
                 ui:_stroke(holder, "outline", .6)
                 local head = ui:_frame(holder, {
                     BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 40),
                 }, "raised")
-                round(head, 8)
+                round(head, 6)
                 ui:_frame(head, {
                     BorderSizePixel = 0, Position = UDim2.new(0, 0, 1, -4),
                     Size = UDim2.new(1, 0, 0, 4),
@@ -2062,7 +2054,7 @@ local UI = (function()
         caption.Position = UDim2.fromOffset(42, 0)
         caption.Size = UDim2.new(1, -42, 1, 0)
 
-        local ATT_COLOR_W, ATT_KEY_W, ATT_GEAR_W, ATT_GAP = 20, 64, 22, 8
+        local ATT_COLOR_W, ATT_KEY_W, ATT_GEAR_W, ATT_GAP = 22, 64, 22, 8
         local attachments = ui:_frame(row, {
             BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5),
             Position = UDim2.new(1, 0, 0.5, 0),
@@ -2086,7 +2078,7 @@ local UI = (function()
                 if x > 0 then x = x + gap end
                 inst.AnchorPoint = Vector2.new(1, 0.5)
                 inst.Position = UDim2.new(1, -x, 0.5, 0)
-                inst.Size = UDim2.fromOffset(width, height or 18)
+                inst.Size = UDim2.fromOffset(width, height or 22)
                 x = x + width
             end
             -- pack from the right: gear -> key -> colors
@@ -2094,13 +2086,13 @@ local UI = (function()
                 place(self.GearWrapper, ATT_GEAR_W, 22)
             end
             if self.KeyPicker and self.KeyPicker.Instance then
-                place(self.KeyPicker.Instance, ATT_KEY_W, 18)
+                place(self.KeyPicker.Instance, ATT_KEY_W, 22)
             end
             if self.ColorPickers then
                 for i = #self.ColorPickers, 1, -1 do
                     local cp = self.ColorPickers[i]
                     if cp and cp.Instance then
-                        place(cp.Instance, ATT_COLOR_W, 18)
+                        place(cp.Instance, ATT_COLOR_W, 22)
                     end
                 end
             end
@@ -2321,7 +2313,7 @@ local UI = (function()
         local row = self:_row(52)
         local t = ui:_text(row, options.Text or "Input")
         t.Size = UDim2.new(1, 0, 0, 18)
-        local field = ui:_input(row, options.Placeholder or "Type here...", options.Default or "")
+        local field = ui:_input(row, options.Placeholder or "Type here...", options.Default or "", "raised")
         field.ClearTextOnFocus = options.ClearTextOnFocus == true
         field.Position = UDim2.fromOffset(0, 22)
         field:FindFirstChildOfClass("UIPadding").PaddingRight = UDim.new(0, 30)
@@ -2576,7 +2568,7 @@ local UI = (function()
         layout(entries, 2)
         local search
         if options.Searchable then
-            search = ui:_input(popup, "Search...", "")
+            search = ui:_input(popup, "Search...", "", "sidebar")
             search.Position = UDim2.fromOffset(6, 6)
             search.Size = UDim2.new(1, -12, 0, 27)
         end
@@ -2620,8 +2612,8 @@ local UI = (function()
                             local on = multi and table.find(value, item) or (not multi and value == item)
                             choice:SetAttribute("Selected", not not on)
                             ui:_tween(choice, {
-                                TextColor3 = on and ui.accent or ui.colors.muted,
-                                BackgroundTransparency = on and 0.9 or 1
+                                TextColor3 = on and ui.colors.text or ui.colors.muted,
+                                BackgroundTransparency = on and 0 or 1
                             }, .2)
                         end
                     end
@@ -2649,7 +2641,7 @@ local UI = (function()
                     if tostring(item):lower():find(query, 1, true) then
                         local entry = item
                         local choice = create("TextButton", {
-                            BackgroundColor3 = ui.colors.raised,
+                            BackgroundColor3 = ui.colors.hover,
                             BackgroundTransparency = 1, Text = tostring(entry),
                             Font = Enum.Font.GothamBlack, TextSize = 13,
                             TextXAlignment = Enum.TextXAlignment.Left,
@@ -2665,25 +2657,29 @@ local UI = (function()
                             and table.find(options.DisabledValues, entry) ~= nil
                         choice:SetAttribute("DisabledChoice", disabledChoice)
                         choice.TextColor3 = disabledChoice and ui.colors.outline
-                            or (choice:GetAttribute("Selected") and ui.accent or ui.colors.muted)
-                        choice.BackgroundTransparency = selected and 0.9 or 1
+                            or (choice:GetAttribute("Selected") and ui.colors.text or ui.colors.muted)
+                        choice.BackgroundTransparency = selected and 0 or 1
                         choice.TextTransparency = .6
                         choice.Active = not disabledChoice
                         ui:_tween(choice, {TextTransparency = 0}, .2)
                         choice.MouseEnter:Connect(function()
                             safe(function()
-                                ui:_tween(choice, {
-                                    TextColor3 = choice:GetAttribute("Selected") and ui.accent or ui.colors.text,
-                                    BackgroundTransparency = choice:GetAttribute("Selected") and 0.9 or 0.95,
-                                }, .15)
+                                if not choice:GetAttribute("Selected") then
+                                    ui:_tween(choice, {
+                                        TextColor3 = ui.colors.text,
+                                        BackgroundTransparency = 0.95
+                                    }, .15)
+                                end
                             end)
                         end)
                         choice.MouseLeave:Connect(function()
                             safe(function()
-                                ui:_tween(choice, {
-                                    TextColor3 = choice:GetAttribute("Selected") and ui.accent or ui.colors.muted,
-                                    BackgroundTransparency = choice:GetAttribute("Selected") and 0.9 or 1,
-                                }, .2)
+                                if not choice:GetAttribute("Selected") then
+                                    ui:_tween(choice, {
+                                        TextColor3 = ui.colors.muted,
+                                        BackgroundTransparency = 1
+                                    }, .2)
+                                end
                             end)
                         end)
                         choice.Activated:Connect(function()
@@ -2740,7 +2736,7 @@ local UI = (function()
         local search
         local top = 23
         if options.Searchable ~= false then
-            search = ui:_input(row, "Search...", "")
+            search = ui:_input(row, "Search...", "", "sidebar")
             search.Position = UDim2.fromOffset(0, 22)
             search.Size = UDim2.new(1, 0, 0, 28)
             search:FindFirstChildOfClass("UIPadding").PaddingLeft = UDim.new(0, 30)
@@ -2757,7 +2753,7 @@ local UI = (function()
         }, row)
         ui:_bind(scroll, "BackgroundColor3", "raised")
         ui:_bind(scroll, "ScrollBarImageColor3", "accent")
-        round(scroll, 6)
+        round(scroll, 4)
         pad(scroll, 5, 5, 5, 5)
         layout(scroll, 0)
         local choices = clone(options.Options)
@@ -2774,7 +2770,7 @@ local UI = (function()
                         b:SetAttribute("Selected", selected)
                         local props = {
                             TextColor3 = selected and ui.colors.text or ui.colors.muted,
-                            BackgroundTransparency = selected and 0.9 or 1
+                            BackgroundTransparency = selected and 0 or 1
                         }
                         if silent then
                             b.TextColor3 = props.TextColor3
@@ -2803,7 +2799,7 @@ local UI = (function()
                     if tostring(item):lower():find(search and search.Text:lower() or "", 1, true) then
                         local v = item
                         local b = create("TextButton", {
-                            BackgroundColor3 = ui.colors.raised,
+                            BackgroundColor3 = ui.colors.hover,
                             BackgroundTransparency = 1, Text = tostring(v),
                             Font = Enum.Font.GothamBlack, TextSize = 13,
                             TextXAlignment = Enum.TextXAlignment.Left,
@@ -2813,25 +2809,29 @@ local UI = (function()
                         round(b, 4)
                         pad(b, 8, 4)
                         b:SetAttribute("Selected", v == value)
-                        b.BackgroundTransparency = v == value and 0.9 or 1
+                        b.BackgroundTransparency = v == value and 0 or 1
                         b:SetAttribute("ChoiceIndex", i)
                         b.TextTransparency = .5
                         ui:_tween(b, {TextTransparency = 0}, .2)
                         b.Activated:Connect(function() safe(function() obj:Set(v) end) end)
                         b.MouseEnter:Connect(function()
                             safe(function()
-                                ui:_tween(b, {
-                                    TextColor3 = b:GetAttribute("Selected") and ui.accent or ui.colors.text,
-                                    BackgroundTransparency = b:GetAttribute("Selected") and 0.9 or 0.95,
-                                }, .15)
+                                if not b:GetAttribute("Selected") then
+                                    ui:_tween(b, {
+                                        TextColor3 = ui.colors.text,
+                                        BackgroundTransparency = 0.95
+                                    }, .15)
+                                end
                             end)
                         end)
                         b.MouseLeave:Connect(function()
                             safe(function()
-                                ui:_tween(b, {
-                                    TextColor3 = b:GetAttribute("Selected") and ui.accent or ui.colors.muted,
-                                    BackgroundTransparency = b:GetAttribute("Selected") and 0.9 or 1,
-                                }, .2)
+                                if not b:GetAttribute("Selected") then
+                                    ui:_tween(b, {
+                                        TextColor3 = ui.colors.muted,
+                                        BackgroundTransparency = 1
+                                    }, .2)
+                                end
                             end)
                         end)
                     end
@@ -2848,7 +2848,7 @@ local UI = (function()
                         local selected = b:GetAttribute("Selected")
                         ui:_tween(b, {
                             TextColor3 = selected and ui.colors.text or ui.colors.muted,
-                            BackgroundTransparency = selected and 0.9 or 1
+                            BackgroundTransparency = selected and 0 or 1
                         }, .22)
                     end
                 end
@@ -2962,7 +2962,7 @@ local UI = (function()
             Position = UDim2.fromOffset(10, 10),
             Size = UDim2.fromOffset(190, 168), Active = true,
         })
-        round(square, 6)
+        round(square, 4)
         local sat = create("UIGradient", {
             Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromHSV(h, 1, 1)),
         }, square)
@@ -2970,7 +2970,7 @@ local UI = (function()
             BackgroundColor3 = Color3.new(), BorderSizePixel = 0,
             Size = UDim2.fromScale(1, 1),
         })
-        round(dark, 6)
+        round(dark, 4)
         create("UIGradient", {Rotation = 90, Transparency = NumberSequence.new(1, 0)}, dark)
         local marker = ui:_frame(square, {
             BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.15,
@@ -2986,7 +2986,7 @@ local UI = (function()
             Position = UDim2.fromOffset(211, 10),
             Size = UDim2.fromOffset(18, 168), Active = true,
         })
-        round(hue, 6)
+        round(hue, 4)
         local hueColors = {}
         for i = 0, 6 do
             table.insert(hueColors, ColorSequenceKeypoint.new(i / 6, Color3.fromHSV(i / 6, 1, 1)))
@@ -3005,7 +3005,7 @@ local UI = (function()
             BorderSizePixel = 0, Position = UDim2.fromOffset(10, 190),
             Size = UDim2.fromOffset(219, 15), Active = true,
         })
-        round(alphaBar, 6)
+        round(alphaBar, 4)
         create("UIGradient", {
             Color = ColorSequence.new(Color3.new(.03, .03, .03), Color3.new(1, 1, 1)),
         }, alphaBar)
@@ -3423,7 +3423,7 @@ local UI = (function()
                         BorderSizePixel = 0, Visible = false, ZIndex = 350,
                         Size = UDim2.fromOffset(100, 28),
                     }, "raised")
-                    round(self.tooltipPanel, 6)
+                    round(self.tooltipPanel, 4)
                     self:_stroke(self.tooltipPanel, "outline", .2)
                     self.tooltipLabel = self:_text(self.tooltipPanel, "", 11, "text")
                     self.tooltipLabel.Position = UDim2.fromOffset(8, 4)
@@ -3591,14 +3591,14 @@ local UI = (function()
                     if self.Attachments then
                         color.Instance.Parent = self.Attachments
                         color.Instance.BackgroundTransparency = 1
-                        color.Instance.Size = UDim2.fromOffset(18, 18)
+                        color.Instance.Size = UDim2.fromOffset(22, 22)
                         for _, child in ipairs(color.Instance:GetDescendants()) do
                             if child:IsA("TextLabel") then child.Visible = false end
                         end
                         if color.Swatch then
                             color.Swatch.AnchorPoint = Vector2.new(0.5, 0.5)
                             color.Swatch.Position = UDim2.fromScale(0.5, 0.5)
-                            color.Swatch.Size = UDim2.fromOffset(16, 16)
+                            color.Swatch.Size = UDim2.fromOffset(18, 18)
                         end
                         if self._relayoutAttachments then self:_relayoutAttachments() end
                         if section.Resize then safe(function() section:Resize() end) end
@@ -3617,10 +3617,10 @@ local UI = (function()
                         if self.Attachments then
                             keybind.Instance.Parent = self.Attachments
                             keybind.Instance.BackgroundTransparency = 1
-                            keybind.Instance.Size = UDim2.fromOffset(48, 18)
+                            keybind.Instance.Size = UDim2.fromOffset(64, 22)
                             if keybind.Button then
                                 keybind.Button.BackgroundTransparency = 1
-                                keybind.Button.TextXAlignment = Enum.TextXAlignment.Center
+                                keybind.Button.TextXAlignment = Enum.TextXAlignment.Right
                                 keybind.Button.TextSize = 12
                                 keybind.Button.Size = UDim2.fromScale(1, 1)
                                 keybind.Button.Position = UDim2.fromScale(0, 0)
@@ -4096,7 +4096,7 @@ local UI = (function()
                 Position = UDim2.fromOffset(-270, 0), GroupTransparency = 1,
                 ClipsDescendants = true,
             }, slot)
-            round(card, 6)
+            round(card, 4)
             self:_stroke(card, "outline", .4)
             local t = self:_text(card, title or "Notification", 12)
             t.Position = UDim2.fromOffset(10, 8)
@@ -4151,13 +4151,13 @@ local UI = (function()
             Position = UDim2.fromOffset(12, 12),
             Size = UDim2.new(1, -24, 1, -24),
         }, "panel")
-        round(panel, 8)
+        round(panel, 6)
         local area = ui:_frame(panel, {
             BorderSizePixel = 0,
             Position = UDim2.fromOffset(12, 12),
             Size = UDim2.new(1, -24, 1, -104),
         }, "background")
-        round(area, 6)
+        round(area, 4)
         local xPositions = {.02, .34, .67}
         for i, name in ipairs({"Username", "Team", "Status"}) do
             local t = ui:_text(area, name, 12, "muted")
@@ -4202,7 +4202,7 @@ local UI = (function()
             Position = UDim2.new(0, 12, 1, -82),
             Size = UDim2.new(1, -24, 0, 70),
         }, "raised")
-        round(footer, 6)
+        round(footer, 4)
         local portrait = create("ImageLabel", {
             BackgroundTransparency = 1,
             Image = "",
@@ -4252,7 +4252,7 @@ local UI = (function()
                             Size = UDim2.new(1, -2, 0, 29),
                             LayoutOrder = index,
                         }, rows)
-                        round(b, 6)
+                        round(b, 4)
                         ui:_gradient(b)
                         if item == selected then ui:_tween(b, {BackgroundTransparency = 0.9}, .24) end
                         for i, value in ipairs({
