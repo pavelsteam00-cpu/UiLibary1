@@ -197,7 +197,7 @@ local UI = (function()
                 if active[property] then pcall(function() active[property]:Cancel() end) end
                 local t = TweenService:Create(
                     x,
-                    TweenInfo.new(duration or .25, style or self.easing, Enum.EasingDirection.Out),
+                    TweenInfo.new(duration or .45, style or self.easing, Enum.EasingDirection.Out),
                     {[property] = value}
                 )
                 active[property] = t
@@ -220,7 +220,7 @@ local UI = (function()
             x.Text = text
             if not silent then
                 x.TextTransparency = .45
-                self:_tween(x, {TextTransparency = 0}, .18, Enum.EasingStyle.Sine)
+                self:_tween(x, {TextTransparency = 0}, .25, Enum.EasingStyle.Sine)
             else
                 x.TextTransparency = 0
             end
@@ -287,7 +287,7 @@ local UI = (function()
                 for i, f in ipairs(parts) do
                     local a = enabled and (.96 - i * .035) or 1
                     if instant then f.BackgroundTransparency = a
-                    else self:_tween(f, {BackgroundTransparency = a}, .32, Enum.EasingStyle.Sine) end
+                    else self:_tween(f, {BackgroundTransparency = a}, .4, Enum.EasingStyle.Sine) end
                 end
             end)
         end
@@ -372,7 +372,7 @@ local UI = (function()
         end)
 
         return root, function(color)
-            if root.Parent then self:_tween(tint, {Value = color}, .22) end
+            if root.Parent then self:_tween(tint, {Value = color}, .3) end
         end
     end
 
@@ -402,14 +402,14 @@ local UI = (function()
                 self:_tween(b, {
                     BackgroundColor3 = selected and self.colors.accent
                         or (hover and self.colors.hover or self.colors.raised),
-                }, .22)
-                self:_tween(outline, {Transparency = hover and .78 or 1}, .22)
+                }, .3)
+                self:_tween(outline, {Transparency = hover and .78 or 1}, .3)
             end)
         end
         connect(b.MouseEnter, function() hover = true repaint() end)
-        connect(b.MouseLeave, function() hover = false repaint() self:_tween(scale, {Scale = 1}, .25) end)
-        connect(b.MouseButton1Down, function() self:_tween(scale, {Scale = .985}, .12) end)
-        connect(b.MouseButton1Up, function() self:_tween(scale, {Scale = 1}, .3, Enum.EasingStyle.Quart) end)
+        connect(b.MouseLeave, function() hover = false repaint() self:_tween(scale, {Scale = 1}, .3) end)
+        connect(b.MouseButton1Down, function() self:_tween(scale, {Scale = .985}, .15) end)
+        connect(b.MouseButton1Up, function() self:_tween(scale, {Scale = 1}, .35, Enum.EasingStyle.Quint) end)
         connect(b:GetAttributeChangedSignal("Selected"), repaint)
         table.insert(self.repaint, repaint)
 
@@ -442,8 +442,8 @@ local UI = (function()
         self:_bind(x, "PlaceholderColor3", "muted")
         round(x, 4); pad(x, 12, 10)
         local s = self:_stroke(x, "outline", 0.5)
-        self:_connect(x.Focused, function() self:_tween(s, {Transparency = 0, Color = self.colors.accent}, .18) end)
-        self:_connect(x.FocusLost, function() self:_tween(s, {Transparency = 0.5, Color = self.colors.outline}, .3) end)
+        self:_connect(x.Focused, function() self:_tween(s, {Transparency = 0, Color = self.colors.accent}, .25) end)
+        self:_connect(x.FocusLost, function() self:_tween(s, {Transparency = 0.5, Color = self.colors.outline}, .35) end)
         return x
     end
 
@@ -677,8 +677,8 @@ local UI = (function()
         row.paint = function()
             safe(function()
                 local active = control:IsActive()
-                self:_tween(row.dot, {BackgroundColor3 = active and self.accent or self.colors.outline}, .16)
-                self:_tween(row.key, {TextColor3 = active and self.accent or self.colors.muted}, .16)
+                self:_tween(row.dot, {BackgroundColor3 = active and self.accent or self.colors.outline}, .3)
+                self:_tween(row.key, {TextColor3 = active and self.accent or self.colors.muted}, .3)
             end)
         end
         table.insert(self.repaint, row.paint)
@@ -985,30 +985,31 @@ local UI = (function()
             self.watermarkStats.Position = UDim2.fromOffset(36 + brand, 0)
             self.watermarkStats.Size = UDim2.fromOffset(stats, 32)
 
-            local keybindListHeight = math.clamp((self.keybindVisibleCount or 0) * 24, 24, 600)
+            local maxScrollHeight = math.clamp(self.viewport.Y - 100 - 20, 48, 400)
+            local keybindListHeight = math.clamp((self.keybindVisibleCount or 0) * 24, 24, maxScrollHeight)
             local keybindHeight = keybindListHeight + 40
             self.keybindPanel.Size = UDim2.fromOffset(240, keybindHeight)
             self.keybindBody.Size = UDim2.new(1, 0, 0, keybindListHeight)
 
             local moderatorCount = math.max(1, self.modListCount or 1)
-            local moderatorListHeight = math.clamp(moderatorCount * 24, 24, 200)
+            local moderatorListHeight = math.clamp(moderatorCount * 24, 24, maxScrollHeight)
             local modHeight = moderatorListHeight + 40
             self.modPanel.Size = UDim2.fromOffset(240, modHeight)
             self.modBody.Size = UDim2.new(1, 0, 0, moderatorListHeight)
 
             if not self._hudInitPos then
                 self._hudInitPos = true
-                self.keybindPanel.AnchorPoint = Vector2.new(0, 0.5)
-                self.keybindPanel.Position = UDim2.new(0, 12, 0.5, 0)
+                self.keybindPanel.AnchorPoint = Vector2.new(0, 0)
+                self.keybindPanel.Position = UDim2.new(0, 12, 0, 100)
 
-                self.modPanel.AnchorPoint = Vector2.new(1, 0.5)
-                self.modPanel.Position = UDim2.new(1, -12, 0.5, 0)
+                self.modPanel.AnchorPoint = Vector2.new(1, 0)
+                self.modPanel.Position = UDim2.new(1, -12, 0, 100)
 
-                self.targetHUD.AnchorPoint = Vector2.new(1, 0.5)
+                self.targetHUD.AnchorPoint = Vector2.new(1, 0)
                 if not (self.targetDragEntry and self.targetDragEntry.userMoved) then
                     self.targetHUD.Position = UDim2.new(
-                        1, -12, 0.5,
-                        modHeight / 2 + (self.targetHUDHeight or 92) / 2 + 12
+                        1, -12, 0,
+                        100 + modHeight + 12
                     )
                     self._lastModHeight = modHeight
                 end
@@ -1018,8 +1019,8 @@ local UI = (function()
                 if self._lastModHeight ~= modHeight then
                     self._lastModHeight = modHeight
                     self.targetHUD.Position = UDim2.new(
-                        1, -12, 0.5,
-                        modHeight / 2 + (self.targetHUDHeight or 92) / 2 + 12
+                        1, -12, 0,
+                        100 + modHeight + 12
                     )
                 end
             end
@@ -1121,11 +1122,12 @@ local UI = (function()
             keybinds      = {}, dragItems = {}, popups = {},
             colorUpdates  = {},
             tweens        = setmetatable({}, {__mode = "k"}),
-            easing        = Enum.EasingStyle.Quart,
+            easing        = Enum.EasingStyle.Quint,
             visible       = true,
             configFolder  = options.ConfigFolder or "SkidUi",
             toggleKey     = keyOf(options.ToggleKey or "RightShift"),
             size          = options.Size or Vector2.new(720, 558),
+            blurSize      = 12
         }, UI)
 
         self.colors.accent = options.Accent or self.colors.accent
@@ -1414,9 +1416,9 @@ local UI = (function()
             end)
         end)
 
-        self:_tween(self.window, {GroupTransparency = 0}, .34)
-        self:_tween(self.windowOutline, {Transparency = .15}, .34)
-        self:_tween(self.blur, {Size = 20}, .34)
+        self:_tween(self.window, {GroupTransparency = 0}, .45, Enum.EasingStyle.Quint)
+        self:_tween(self.windowOutline, {Transparency = .15}, .45, Enum.EasingStyle.Quint)
+        self:_tween(self.blur, {Size = self.blurSize}, .45, Enum.EasingStyle.Quint)
         return self
     end
 
@@ -1443,7 +1445,7 @@ local UI = (function()
                 if not b.x or not b.x.Parent then
                     table.remove(self.bindings, i)
                 elseif b.role == role then
-                    self:_tween(b.x, {[b.property] = b.transform and b.transform(color) or color}, .24)
+                    self:_tween(b.x, {[b.property] = b.transform and b.transform(color) or color}, .3)
                 end
             end
             for _, f in ipairs(self.repaint) do safe(f) end
@@ -1479,14 +1481,14 @@ local UI = (function()
 
             if self.visible then
                 self.window.Visible = true
-                self:_tween(self.window, {GroupTransparency = 0}, .34)
-                self:_tween(self.windowOutline, {Transparency = .15}, .34)
-                self:_tween(self.blur, {Size = 20}, .34)
+                self:_tween(self.window, {GroupTransparency = 0}, .45, Enum.EasingStyle.Quint)
+                self:_tween(self.windowOutline, {Transparency = .15}, .45, Enum.EasingStyle.Quint)
+                self:_tween(self.blur, {Size = self.blurSize}, .45, Enum.EasingStyle.Quint)
             else
-                self:_tween(self.window, {GroupTransparency = 1}, .23)
-                self:_tween(self.windowOutline, {Transparency = 1}, .23)
-                self:_tween(self.blur, {Size = 0}, .23)
-                task.delay(.24, function()
+                self:_tween(self.window, {GroupTransparency = 1}, .35, Enum.EasingStyle.Quint)
+                self:_tween(self.windowOutline, {Transparency = 1}, .35, Enum.EasingStyle.Quint)
+                self:_tween(self.blur, {Size = 0}, .35, Enum.EasingStyle.Quint)
+                task.delay(.36, function()
                     if not self.destroyed and token == self.visibilityToken then
                         self.window.Visible = false
                     end
@@ -1548,11 +1550,11 @@ local UI = (function()
                     self:_tween(entry.panel, {
                         GroupTransparency = 1,
                         Size = UDim2.fromOffset(entry.width, math.max(0, entry.height - 8)),
-                    }, .16)
+                    }, .25, Enum.EasingStyle.Quint)
                     local stroke = entry.panel:FindFirstChildOfClass("UIStroke")
-                    if stroke then self:_tween(stroke, {Transparency = 1}, .16) end
+                    if stroke then self:_tween(stroke, {Transparency = 1}, .25) end
                     invoke(entry.onClose)
-                    task.delay(.17, function()
+                    task.delay(.26, function()
                         if not self.destroyed
                             and entry.panel and entry.panel.Parent
                             and entry.panel:GetAttribute("OpenGeneration") == token
@@ -1610,9 +1612,9 @@ local UI = (function()
                 panel = panel, anchor = anchor, width = width, height = height,
                 open = true, token = entry + 1, onClose = onClose,
             })
-            self:_tween(panel, {GroupTransparency = 0, Size = UDim2.fromOffset(width, height)}, .24)
+            self:_tween(panel, {GroupTransparency = 0, Size = UDim2.fromOffset(width, height)}, .35, Enum.EasingStyle.Quint)
             local stroke = panel:FindFirstChildOfClass("UIStroke")
-            if stroke then self:_tween(stroke, {Transparency = .25}, .24) end
+            if stroke then self:_tween(stroke, {Transparency = .25}, .35) end
             return true
         end)
     end
@@ -1698,12 +1700,12 @@ local UI = (function()
                                 if scroll and row and row.Parent then
                                     local y = (row.AbsolutePosition.Y - scroll.AbsolutePosition.Y) / self.scale
                                         + scroll.CanvasPosition.Y
-                                    self:_tween(scroll, {CanvasPosition = Vector2.new(0, math.max(0, y - 14))}, .4)
+                                    self:_tween(scroll, {CanvasPosition = Vector2.new(0, math.max(0, y - 14))}, .5, Enum.EasingStyle.Quint)
                                 end
                                 if row then
                                     local outline = self:_stroke(row, "accent", .2)
-                                    self:_tween(outline, {Transparency = 1}, 1)
-                                    task.delay(1.1, function()
+                                    self:_tween(outline, {Transparency = 1}, 1.2)
+                                    task.delay(1.3, function()
                                         if outline.Parent then pcall(function() outline:Destroy() end) end
                                     end)
                                 end
@@ -1720,7 +1722,7 @@ local UI = (function()
             if self.popups[1] and self.popups[1].panel == self.searchPanel then
                 local e = self.popups[1]
                 e.height = h
-                self:_tween(self.searchPanel, {Size = UDim2.fromOffset(420, h)}, .2)
+                self:_tween(self.searchPanel, {Size = UDim2.fromOffset(420, h)}, .25)
             else
                 self:_openPopup(self.searchBox, self.searchPanel, 420, h)
             end
@@ -1747,8 +1749,8 @@ local UI = (function()
         page.button = b
         page.tint = tint
         local scale = root:FindFirstChildOfClass("UIScale")
-        self:_connect(b.MouseEnter, function() self:_tween(scale, {Scale = 1.08}, .2, Enum.EasingStyle.Sine) end)
-        self:_connect(b.MouseLeave, function() self:_tween(scale, {Scale = 1}, .24, Enum.EasingStyle.Sine) end)
+        self:_connect(b.MouseEnter, function() self:_tween(scale, {Scale = 1.08}, .25, Enum.EasingStyle.Sine) end)
+        self:_connect(b.MouseLeave, function() self:_tween(scale, {Scale = 1}, .3, Enum.EasingStyle.Sine) end)
         self:_connect(b.Activated, function()
             local target = page.lastTab or page.tabs[1]
             if target then self:Select(page, target) end
@@ -1761,7 +1763,7 @@ local UI = (function()
                 self:_tween(b, {
                     BackgroundColor3 = self.accent,
                     BackgroundTransparency = selected and 0 or 1,
-                }, .28)
+                }, .35)
                 tint(selected and self.colors.ink or self.colors.muted:Lerp(self.colors.text, .35))
                 page.glow(selected)
             end)
@@ -1823,7 +1825,7 @@ local UI = (function()
                     ui:_tween(tab.button, {
                         BackgroundColor3 = selected and ui.accent or ui.colors.panel,
                         TextColor3 = selected and ui.colors.ink or ui.colors.muted,
-                    }, .26)
+                    }, .3)
                     tab.glow(selected)
                 end)
             end)
@@ -1943,12 +1945,12 @@ local UI = (function()
                 self:_tween(old.body, {
                     GroupTransparency = 1,
                     Position = UDim2.fromOffset(-dx, -dy),
-                }, .24, Enum.EasingStyle.Sine)
+                }, .3, Enum.EasingStyle.Quint)
                 for _, section in ipairs(old.sections) do
                     local stroke = section.holder:FindFirstChildOfClass("UIStroke")
-                    if stroke then self:_tween(stroke, {Transparency = 1}, .24) end
+                    if stroke then self:_tween(stroke, {Transparency = 1}, .3) end
                 end
-                task.delay(.26, function()
+                task.delay(.32, function()
                     if not self.destroyed
                         and old.transitionToken == generation
                         and self.selectedTab ~= old
@@ -1966,12 +1968,12 @@ local UI = (function()
             tab.body.Visible = true
             for _, section in ipairs(tab.sections) do
                 local stroke = section.holder:FindFirstChildOfClass("UIStroke")
-                if stroke then self:_tween(stroke, {Transparency = .6}, .34) end
+                if stroke then self:_tween(stroke, {Transparency = .6}, .4) end
             end
             self:_tween(tab.body, {
                 GroupTransparency = 0,
                 Position = UDim2.fromOffset(0, 0),
-            }, .34, Enum.EasingStyle.Quart)
+            }, .45, Enum.EasingStyle.Quint)
         end)
     end
 
@@ -2111,8 +2113,8 @@ local UI = (function()
                     for k, v in pairs(p) do thumb[k] = v end
                     track.BackgroundColor3 = state and ui.accent or ui.colors.raised
                 else
-                    ui:_tween(thumb, p, .28)
-                    ui:_tween(track, {BackgroundColor3 = state and ui.accent or ui.colors.raised}, .25)
+                    ui:_tween(thumb, p, .3)
+                    ui:_tween(track, {BackgroundColor3 = state and ui.accent or ui.colors.raised}, .35)
                 end
             end)
         end
@@ -2184,10 +2186,10 @@ local UI = (function()
         pill(bar)
         local barOutline = ui:_stroke(bar, "accent", 1)
         ui:_ownedConnect(row, bar.MouseEnter, function()
-            ui:_tween(barOutline, {Transparency = .55}, .18)
+            ui:_tween(barOutline, {Transparency = .55}, .25)
         end)
         ui:_ownedConnect(row, bar.MouseLeave, function()
-            ui:_tween(barOutline, {Transparency = 1}, .22)
+            ui:_tween(barOutline, {Transparency = 1}, .3)
         end)
         local fill = ui:_frame(bar, {BorderSizePixel = 0, Size = UDim2.fromScale(0, 1)}, "accent")
         pill(fill); ui:_gradient(fill)
@@ -2234,7 +2236,7 @@ local UI = (function()
                     if silent then
                         for k, v in pairs(p) do x[k] = v end
                     else
-                        ui:_tween(x, p, .115, Enum.EasingStyle.Sine)
+                        ui:_tween(x, p, .15, Enum.EasingStyle.Sine)
                     end
                 end
                 set(fill, {
@@ -2385,7 +2387,7 @@ local UI = (function()
             safe(function()
                 local display = key == "None" and "None" or keyName(key)
                 ui:_changeText(b, display, silent)
-                ui:_tween(b, {TextColor3 = ui.colors.muted}, .18)
+                ui:_tween(b, {TextColor3 = ui.colors.muted}, .25)
             end)
         end
 
@@ -2457,7 +2459,7 @@ local UI = (function()
             if focused then focused:ReleaseFocus() end
             ui.listening = self
             ui:_changeText(b, "[...]")
-            ui:_tween(b, {TextColor3 = ui.accent}, .18)
+            ui:_tween(b, {TextColor3 = ui.accent}, .25)
         end
 
         local MODE_BTN_H, MODE_GAP, MODE_PAD = 26, 6, 8
@@ -2508,9 +2510,9 @@ local UI = (function()
                 safe(function() obj:Capture() end)
             end
         end)
-        connect(b.MouseEnter, function() ui:_tween(b, {TextColor3 = ui.accent}, .16) end)
+        connect(b.MouseEnter, function() ui:_tween(b, {TextColor3 = ui.accent}, .25) end)
         connect(b.MouseLeave, function()
-            if ui.listening ~= obj then ui:_tween(b, {TextColor3 = ui.colors.muted}, .2) end
+            if ui.listening ~= obj then ui:_tween(b, {TextColor3 = ui.colors.muted}, .3) end
         end)
         connect(b.InputBegan, function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton2 then
@@ -2616,7 +2618,7 @@ local UI = (function()
                             ui:_tween(choice, {
                                 TextColor3 = on and ui.colors.text or ui.colors.muted,
                                 BackgroundTransparency = on and 0 or 1
-                            }, .2)
+                            }, .3)
                         end
                     end
                 end
@@ -2663,14 +2665,14 @@ local UI = (function()
                         choice.BackgroundTransparency = selected and 0 or 1
                         choice.TextTransparency = .6
                         choice.Active = not disabledChoice
-                        ui:_tween(choice, {TextTransparency = 0}, .2)
+                        ui:_tween(choice, {TextTransparency = 0}, .25)
                         choice.MouseEnter:Connect(function()
                             safe(function()
                                 if not choice:GetAttribute("Selected") then
                                     ui:_tween(choice, {
                                         TextColor3 = ui.colors.text,
                                         BackgroundTransparency = 0.95
-                                    }, .15)
+                                    }, .25)
                                 end
                             end)
                         end)
@@ -2680,7 +2682,7 @@ local UI = (function()
                                     ui:_tween(choice, {
                                         TextColor3 = ui.colors.muted,
                                         BackgroundTransparency = 1
-                                    }, .2)
+                                    }, .3)
                                 end
                             end)
                         end)
@@ -2717,9 +2719,9 @@ local UI = (function()
                 local h = math.max(34, math.min(#choices, maxVisible) * 26 + (search and 43 or 10))
                 if ui:_openPopup(
                     b, popup, math.max(145, b.AbsoluteSize.X / ui.scale), h, self.popupOwner,
-                    function() ui:_tween(arrow, {Rotation = 0}, .2) end
+                    function() ui:_tween(arrow, {Rotation = 0}, .25) end
                 ) then
-                    ui:_tween(arrow, {Rotation = 180}, .24)
+                    ui:_tween(arrow, {Rotation = 180}, .3)
                 end
             end)
         end)
@@ -2778,7 +2780,7 @@ local UI = (function()
                             b.TextColor3 = props.TextColor3
                             b.BackgroundTransparency = props.BackgroundTransparency
                         else
-                            ui:_tween(b, props, .22)
+                            ui:_tween(b, props, .3)
                         end
                     end
                 end
@@ -2814,7 +2816,7 @@ local UI = (function()
                         b.BackgroundTransparency = v == value and 0 or 1
                         b:SetAttribute("ChoiceIndex", i)
                         b.TextTransparency = .5
-                        ui:_tween(b, {TextTransparency = 0}, .2)
+                        ui:_tween(b, {TextTransparency = 0}, .25)
                         b.Activated:Connect(function() safe(function() obj:Set(v) end) end)
                         b.MouseEnter:Connect(function()
                             safe(function()
@@ -2822,7 +2824,7 @@ local UI = (function()
                                     ui:_tween(b, {
                                         TextColor3 = ui.colors.text,
                                         BackgroundTransparency = 0.95
-                                    }, .15)
+                                    }, .25)
                                 end
                             end)
                         end)
@@ -2832,7 +2834,7 @@ local UI = (function()
                                     ui:_tween(b, {
                                         TextColor3 = ui.colors.muted,
                                         BackgroundTransparency = 1
-                                    }, .2)
+                                    }, .3)
                                 end
                             end)
                         end)
@@ -2851,7 +2853,7 @@ local UI = (function()
                         ui:_tween(b, {
                             TextColor3 = selected and ui.colors.text or ui.colors.muted,
                             BackgroundTransparency = selected and 0 or 1
-                        }, .22)
+                        }, .3)
                     end
                 end
             end)
@@ -2878,8 +2880,8 @@ local UI = (function()
         }, row)
         pill(swatch); ui:_gradient(swatch)
         local outline = ui:_stroke(swatch, "text", 1)
-        ui:_ownedConnect(row, swatch.MouseEnter, function() ui:_tween(outline, {Transparency = .5}, .2) end)
-        ui:_ownedConnect(row, swatch.MouseLeave, function() ui:_tween(outline, {Transparency = 1}, .25) end)
+        ui:_ownedConnect(row, swatch.MouseEnter, function() ui:_tween(outline, {Transparency = .5}, .25) end)
+        ui:_ownedConnect(row, swatch.MouseLeave, function() ui:_tween(outline, {Transparency = 1}, .3) end)
 
         local base = options.Default or Color3.fromRGB(170, 72, 25)
         local h, s, v = base:ToHSV()
@@ -2899,7 +2901,7 @@ local UI = (function()
                 for name, button in pairs(modeButtons) do
                     local active = (name == "Rainbow" and rainbow) or (name == "Fading" and fading)
                     button:SetAttribute("Selected", active == true)
-                    ui:_tween(button, {TextColor3 = active and ui.colors.ink or ui.colors.muted}, .18)
+                    ui:_tween(button, {TextColor3 = active and ui.colors.ink or ui.colors.muted}, .25)
                 end
             end)
         end
@@ -2929,7 +2931,7 @@ local UI = (function()
                     swatch.BackgroundColor3 = col
                     swatch.BackgroundTransparency = trans
                 else
-                    ui:_tween(swatch, {BackgroundColor3 = col, BackgroundTransparency = trans}, .12, Enum.EasingStyle.Sine)
+                    ui:_tween(swatch, {BackgroundColor3 = col, BackgroundTransparency = trans}, .2, Enum.EasingStyle.Sine)
                 end
                 if refresh and popup.Visible then refresh() end
                 paintModes()
@@ -2985,26 +2987,26 @@ local UI = (function()
 
         local hue = ui:_frame(popup, {
             BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0,
-            Position = UDim2.fromOffset(10, 190),
-            Size = UDim2.fromOffset(219, 15), Active = true,
+            Position = UDim2.fromOffset(211, 10),
+            Size = UDim2.fromOffset(18, 168), Active = true,
         })
         round(hue, 4)
         local hueColors = {}
         for i = 0, 6 do
             table.insert(hueColors, ColorSequenceKeypoint.new(i / 6, Color3.fromHSV(i / 6, 1, 1)))
         end
-        create("UIGradient", {Rotation = 0, Color = ColorSequence.new(hueColors)}, hue)
+        create("UIGradient", {Rotation = 90, Color = ColorSequence.new(hueColors)}, hue)
         local hueMarker = ui:_frame(hue, {
             BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.1,
             BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, .5),
             Size = UDim2.fromOffset(14, 14), ZIndex = 5, Active = false,
         })
-        hueMarker.Position = UDim2.fromScale(0, 0.5)
+        hueMarker.Position = UDim2.fromScale(0.5, 0)
         pill(hueMarker)
         ui:_stroke(hueMarker, "ink", 0).Thickness = 1.5
 
         local alphaBar = ui:_frame(popup, {
-            BorderSizePixel = 0, Position = UDim2.fromOffset(10, 215),
+            BorderSizePixel = 0, Position = UDim2.fromOffset(10, 190),
             Size = UDim2.fromOffset(219, 15), Active = true,
         })
         round(alphaBar, 4)
@@ -3021,11 +3023,11 @@ local UI = (function()
         ui:_stroke(am, "ink", 0).Thickness = 1.5
 
         local rgb = ui:_input(popup, "R, G, B, A", "")
-        rgb.Position = UDim2.fromOffset(10, 240)
+        rgb.Position = UDim2.fromOffset(10, 216)
         rgb.Size = UDim2.fromOffset(219, 28)
 
         local modeButton = ui:_button(popup, "Static")
-        modeButton.Position = UDim2.fromOffset(10, 280)
+        modeButton.Position = UDim2.fromOffset(10, 256)
         modeButton.Size = UDim2.fromOffset(219, 28)
         modeButton.TextXAlignment = Enum.TextXAlignment.Left
         pad(modeButton, 10, 28)
@@ -3056,10 +3058,10 @@ local UI = (function()
         refresh = function()
             safe(function()
                 sat.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromHSV(h, 1, 1))
-                ui:_tween(marker, {Position = UDim2.fromScale(s, 1 - v)}, .09, Enum.EasingStyle.Sine)
-                ui:_tween(hueMarker, {Position = UDim2.fromScale(h, 0.5)}, .09, Enum.EasingStyle.Sine)
-                ui:_tween(am, {Position = UDim2.fromScale(alpha, 0.5)}, .09, Enum.EasingStyle.Sine)
-                ui:_tween(alphaBar, {BackgroundColor3 = current()}, .12, Enum.EasingStyle.Sine)
+                ui:_tween(marker, {Position = UDim2.fromScale(s, 1 - v)}, .15, Enum.EasingStyle.Sine)
+                ui:_tween(hueMarker, {Position = UDim2.fromScale(0.5, h)}, .15, Enum.EasingStyle.Sine)
+                ui:_tween(am, {Position = UDim2.fromScale(alpha, 0.5)}, .15, Enum.EasingStyle.Sine)
+                ui:_tween(alphaBar, {BackgroundColor3 = current()}, .2, Enum.EasingStyle.Sine)
                 if not rgb:IsFocused() then
                     local c = obj:Get()
                     rgb.Text = string.format("%d, %d, %d, %.2f", c.r, c.g, c.b, alpha)
@@ -3076,7 +3078,7 @@ local UI = (function()
                     s = math.clamp((input.Position.X - square.AbsolutePosition.X) / square.AbsoluteSize.X, 0, 1)
                     v = 1 - math.clamp((input.Position.Y - square.AbsolutePosition.Y) / square.AbsoluteSize.Y, 0, 1)
                 elseif active == "hue" then
-                    h = math.clamp((input.Position.X - hue.AbsolutePosition.X) / hue.AbsoluteSize.X, 0, 1)
+                    h = math.clamp((input.Position.Y - hue.AbsolutePosition.Y) / hue.AbsoluteSize.Y, 0, 1)
                 elseif active == "alpha" then
                     alpha = math.clamp((input.Position.X - alphaBar.AbsolutePosition.X) / alphaBar.AbsoluteSize.X, 0, 1)
                 end
@@ -3141,7 +3143,7 @@ local UI = (function()
                     local vv = fading and v * (.6 + .4 * (math.sin(os.clock() * 2) + 1) / 2) or v
                     sat.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromHSV(hh, 1, 1))
                     marker.Position = UDim2.fromScale(s, 1 - vv)
-                    hueMarker.Position = UDim2.fromScale(hh, 0.5)
+                    hueMarker.Position = UDim2.fromScale(0.5, hh)
                     am.Position = UDim2.fromScale(alpha, 0.5)
                 end
                 invoke(options.Callback, c, alpha, cachedMode)
@@ -3321,10 +3323,10 @@ local UI = (function()
             gearSection:Button({Text = "Gear button", Callback = options.GearButtonCallback})
         end
         ui:_ownedConnect(row, gear.MouseEnter, function()
-            ui:_tween(icon, {Rotation = 45}, .3); tint(ui.accent)
+            ui:_tween(icon, {Rotation = 45}, .35); tint(ui.accent)
         end)
         ui:_ownedConnect(row, gear.MouseLeave, function()
-            ui:_tween(icon, {Rotation = 0}, .3); tint(ui.colors.muted)
+            ui:_tween(icon, {Rotation = 0}, .35); tint(ui.colors.muted)
         end)
         ui:_ownedConnect(row, gear.Activated, function()
             safe(function()
@@ -3713,10 +3715,10 @@ local UI = (function()
                         settingsSection:Toggle({Text = "Enable outline", Default = true, Callback = function(v) self.OutlineEnabled = v end})
                     end
                     section.ui:_ownedConnect(self.Instance, gear.MouseEnter, function()
-                        section.ui:_tween(icon, {Rotation = 45}, .3); tint(section.ui.accent)
+                        section.ui:_tween(icon, {Rotation = 45}, .35); tint(section.ui.accent)
                     end)
                     section.ui:_ownedConnect(self.Instance, gear.MouseLeave, function()
-                        section.ui:_tween(icon, {Rotation = 0}, .3); tint(section.ui.colors.muted)
+                        section.ui:_tween(icon, {Rotation = 0}, .35); tint(section.ui.colors.muted)
                     end)
                     section.ui:_ownedConnect(self.Instance, gear.Activated, function()
                         safe(function()
@@ -4107,10 +4109,10 @@ local UI = (function()
             body.Position = UDim2.fromOffset(10, 24)
             body.Size = UDim2.new(1, -20, 0, 20)
             body.TextTruncate = Enum.TextTruncate.AtEnd
-            self:_tween(slot, {Size = UDim2.fromOffset(245, 52)}, .28)
+            self:_tween(slot, {Size = UDim2.fromOffset(245, 52)}, .45, Enum.EasingStyle.Quint)
             self:_tween(card, {
                 Position = UDim2.fromOffset(0, 0), GroupTransparency = 0,
-            }, .38, Enum.EasingStyle.Quint)
+            }, .45, Enum.EasingStyle.Quint)
             if soundId ~= nil then
                 local ok, sound = pcall(function()
                     local s = Instance.new("Sound")
@@ -4131,11 +4133,11 @@ local UI = (function()
             task.delay(duration or 4, function()
                 if self.destroyed or not slot.Parent then return end
                 local destination = -(card.AbsolutePosition.X / self.scale) - card.AbsoluteSize.X / self.scale - 24
-                self:_tween(card, {Position = UDim2.fromOffset(destination, 0)}, .42, Enum.EasingStyle.Quint)
-                task.delay(.43, function()
+                self:_tween(card, {Position = UDim2.fromOffset(destination, 0)}, .45, Enum.EasingStyle.Quint)
+                task.delay(.46, function()
                     if self.destroyed or not slot.Parent then return end
-                    self:_tween(slot, {Size = UDim2.fromOffset(245, 0)}, .22)
-                    task.delay(.23, function()
+                    self:_tween(slot, {Size = UDim2.fromOffset(245, 0)}, .25)
+                    task.delay(.26, function()
                         if slot.Parent then pcall(function() slot:Destroy() end) end
                     end)
                 end)
@@ -4176,7 +4178,7 @@ local UI = (function()
             safe(function()
                 fi.Visible = false
                 finder.TextTransparency = 0
-                ui:_tween(finder, {Size = UDim2.fromOffset(170, 26)}, .25)
+                ui:_tween(finder, {Size = UDim2.fromOffset(170, 26)}, .3)
             end)
         end)
         ui:_connect(finder.FocusLost, function()
@@ -4184,7 +4186,7 @@ local UI = (function()
                 if finder.Text == "" then
                     fi.Visible = true
                     finder.TextTransparency = 1
-                    ui:_tween(finder, {Size = UDim2.fromOffset(26, 26)}, .25)
+                    ui:_tween(finder, {Size = UDim2.fromOffset(26, 26)}, .3)
                 end
             end)
         end)
@@ -4256,7 +4258,7 @@ local UI = (function()
                         }, rows)
                         round(b, 4)
                         ui:_gradient(b)
-                        if item == selected then ui:_tween(b, {BackgroundTransparency = 0.9}, .24) end
+                        if item == selected then ui:_tween(b, {BackgroundTransparency = 0.9}, .3) end
                         for i, value in ipairs({
                             item.DisplayName ~= item.Name
                                 and (item.DisplayName .. " (" .. item.Name .. ")")
@@ -4292,7 +4294,7 @@ local UI = (function()
                 for value, b in pairs(buttons) do
                     local active = selected and api:GetStatus(selected) == value
                     b:SetAttribute("Selected", active == true)
-                    ui:_tween(b, {TextColor3 = active and ui.colors.ink or ui.colors.muted}, .22)
+                    ui:_tween(b, {TextColor3 = active and ui.colors.ink or ui.colors.muted}, .3)
                 end
             end)
         end
