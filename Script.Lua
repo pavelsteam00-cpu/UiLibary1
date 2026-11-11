@@ -1024,17 +1024,19 @@ local UI = (function()
             -- keep top edges fixed so lists only grow downward
             self.keybindPanel.AnchorPoint = Vector2.new(0, 0)
             self.modPanel.AnchorPoint = Vector2.new(1, 0)
+            self.targetHUD.AnchorPoint = Vector2.new(1, 0)
 
             if not self._hudInitPos then
                 self._hudInitPos = true
                 -- same vertical level, screen middle; grow only downward
                 self.keybindPanel.Position = UDim2.new(0, 12, 0.5, 0)
                 self.modPanel.Position = UDim2.new(1, -12, 0.5, 0)
+            end
 
-                self.targetHUD.AnchorPoint = Vector2.new(1, 0)
-                if not (self.targetDragEntry and self.targetDragEntry.userMoved) then
-                    self.targetHUD.Position = UDim2.new(1, -12, 0.5, 120)
-                end
+            -- Target HUD flush under Moderators; follows list growth downward
+            if not (self.targetDragEntry and self.targetDragEntry.userMoved) then
+                local gap = 8
+                self.targetHUD.Position = UDim2.new(1, -12, 0.5, modHeight + gap)
             end
 
             self:_fitDraggables()
@@ -4585,7 +4587,7 @@ local UI = (function()
     end
 
     UI.Section = Section
-    UI.Version = "2.2.3"
+    UI.Version = "2.2.4"
     UI.Description = "SkidUi interface library"
     return UI
 end)()
