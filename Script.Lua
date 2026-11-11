@@ -3471,9 +3471,11 @@ local UI = (function()
                         color.Instance.Parent = self.Attachments
                         color.Instance.Size = UDim2.fromOffset(22, 22)
                         color.Instance.LayoutOrder = 10 + #self.ColorPickers
-                        for _, child in ipairs(color.Instance:GetChildren()) do
+                        color.Instance.BackgroundTransparency = 1
+                        for _, child in ipairs(color.Instance:GetDescendants()) do
                             if child:IsA("TextLabel") then child.Visible = false end
                         end
+                        if section.Resize then safe(function() section:Resize() end) end
                     else
                         color.Instance.Parent = self.Instance
                         color.Instance.Size = UDim2.fromOffset(22, 22)
@@ -3490,18 +3492,25 @@ local UI = (function()
                             keybind.Instance.Parent = self.Attachments
                             keybind.Instance.Size = UDim2.fromOffset(70, 22)
                             keybind.Instance.LayoutOrder = 50
+                            keybind.Instance.BackgroundTransparency = 1
                         else
                             keybind.Instance.Parent = self.Instance
                             keybind.Instance.Size = UDim2.fromOffset(94, 24)
                             keybind.Instance.Position = UDim2.new(1, -94, 0, 0)
                         end
-                        keybind.Button.Position = UDim2.fromScale(0, 0)
-                        keybind.Button.Size = UDim2.fromScale(1, 1)
-                        for _, child in ipairs(keybind.Instance:GetChildren()) do
-                            if child:IsA("TextLabel") then child.Visible = false end
+                        if keybind.Button then
+                            keybind.Button.Position = UDim2.fromScale(0, 0)
+                            keybind.Button.Size = UDim2.fromScale(1, 1)
                         end
+                        for _, child in ipairs(keybind.Instance:GetDescendants()) do
+                            if child:IsA("TextLabel") and child ~= (keybind.Button and keybind.Button:FindFirstChildWhichIsA("TextLabel")) then
+                                child.Visible = false
+                            end
+                        end
+                        -- keep only the key display text on the button
                         self.KeyPicker = keybind
                         section.ui.keybindDirty = true
+                        if section.Resize then safe(function() section:Resize() end) end
                     end
                     return self
                 end
@@ -3518,8 +3527,8 @@ local UI = (function()
                             LayoutOrder = 100,
                         }, self.Attachments)
                         gear.Parent = wrapper
-                        gear.AnchorPoint = Vector2.new(0, 0)
-                        gear.Position = UDim2.new(0, 0, 0, 1)
+                        gear.AnchorPoint = Vector2.new(0.5, 0.5)
+                        gear.Position = UDim2.new(0.5, 0, 0.5, -4)
                         gear.Size = UDim2.fromScale(1, 1)
                     else
                         gear.Parent = self.Instance
