@@ -1,5 +1,3 @@
--- Ui
-
 local UI = (function()
     local Players       = game:GetService("Players")
     local Teams         = game:GetService("Teams")
@@ -8,6 +6,7 @@ local UI = (function()
     local RunService    = game:GetService("RunService")
     local HttpService   = game:GetService("HttpService")
     local TextService   = game:GetService("TextService")
+    local Lighting      = game:GetService("Lighting")
 
     local player = Players.LocalPlayer
     local UI, Section = {}, {}
@@ -19,7 +18,6 @@ local UI = (function()
         return ok, err
     end
 
-    -- Строго заданная палитра
     local defaults = {
         background = Color3.fromRGB(8, 8, 8),
         sidebar    = Color3.fromRGB(12, 12, 12),
@@ -382,7 +380,7 @@ local UI = (function()
         local b = create("TextButton", {
             BackgroundColor3 = self.colors.raised, BorderSizePixel = 0,
             Text = text or "", TextColor3 = self.colors.text,
-            Font = Enum.Font.GothamBlack, TextSize = 13, AutoButtonColor = false,
+            Font = Enum.Font.GothamBlack, TextSize = 12, AutoButtonColor = false,
         }, parent)
         round(b, 4)
         self:_bind(b, "TextColor3", "text")
@@ -435,7 +433,7 @@ local UI = (function()
         local x = create("TextBox", {
             BackgroundColor3 = self.colors[role or "background"], BorderSizePixel = 0,
             ClearTextOnFocus = false, Text = tostring(text or ""),
-            PlaceholderText = placeholder or "", TextSize = 13,
+            PlaceholderText = placeholder or "", TextSize = 12,
             Font = Enum.Font.GothamBlack, TextXAlignment = Enum.TextXAlignment.Left,
             Size = UDim2.new(1, 0, 0, 30),
         }, parent)
@@ -1133,6 +1131,8 @@ local UI = (function()
         self.colors.accent = options.Accent or self.colors.accent
         self.accent = self.colors.accent
 
+        self.blur = create("BlurEffect", {Size = 0, Name = "SkidBlur"}, Lighting)
+
         self.gui = create("ScreenGui", {
             Name = "SkidHub_" .. HttpService:GenerateGUID(false),
             IgnoreGuiInset = true, ResetOnSpawn = false,
@@ -1416,6 +1416,7 @@ local UI = (function()
 
         self:_tween(self.window, {GroupTransparency = 0}, .34)
         self:_tween(self.windowOutline, {Transparency = .15}, .34)
+        self:_tween(self.blur, {Size = 20}, .34)
         return self
     end
 
@@ -1480,9 +1481,11 @@ local UI = (function()
                 self.window.Visible = true
                 self:_tween(self.window, {GroupTransparency = 0}, .34)
                 self:_tween(self.windowOutline, {Transparency = .15}, .34)
+                self:_tween(self.blur, {Size = 20}, .34)
             else
                 self:_tween(self.window, {GroupTransparency = 1}, .23)
                 self:_tween(self.windowOutline, {Transparency = 1}, .23)
+                self:_tween(self.blur, {Size = 0}, .23)
                 task.delay(.24, function()
                     if not self.destroyed and token == self.visibilityToken then
                         self.window.Visible = false
@@ -2054,7 +2057,7 @@ local UI = (function()
         caption.Position = UDim2.fromOffset(42, 0)
         caption.Size = UDim2.new(1, -42, 1, 0)
 
-        local ATT_COLOR_W, ATT_KEY_W, ATT_GEAR_W, ATT_GAP = 22, 64, 22, 8
+        local ATT_COLOR_W, ATT_KEY_W, ATT_GEAR_W, ATT_GAP = 22, 80, 22, 4
         local attachments = ui:_frame(row, {
             BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5),
             Position = UDim2.new(1, 0, 0.5, 0),
@@ -2081,7 +2084,6 @@ local UI = (function()
                 inst.Size = UDim2.fromOffset(width, height or 22)
                 x = x + width
             end
-            -- pack from the right: gear -> key -> colors
             if self.GearWrapper then
                 place(self.GearWrapper, ATT_GEAR_W, 22)
             end
@@ -2363,7 +2365,7 @@ local UI = (function()
         local b = create("TextButton", {
             Name = "KeyButton", BackgroundTransparency = 1, BorderSizePixel = 0,
             AutoButtonColor = false, Text = "", Font = Enum.Font.GothamBlack,
-            TextSize = 13, TextXAlignment = Enum.TextXAlignment.Right,
+            TextSize = 12, TextXAlignment = Enum.TextXAlignment.Right,
             TextTruncate = Enum.TextTruncate.AtEnd,
             Position = UDim2.new(.54, 0, 0, 0),
             Size = UDim2.new(.46, 0, 1, 0), ZIndex = 3,
@@ -2643,7 +2645,7 @@ local UI = (function()
                         local choice = create("TextButton", {
                             BackgroundColor3 = ui.colors.hover,
                             BackgroundTransparency = 1, Text = tostring(entry),
-                            Font = Enum.Font.GothamBlack, TextSize = 13,
+                            Font = Enum.Font.GothamBlack, TextSize = 12,
                             TextXAlignment = Enum.TextXAlignment.Left,
                             Size = UDim2.new(1, -3, 0, 24),
                             LayoutOrder = index, AutoButtonColor = false,
@@ -2801,7 +2803,7 @@ local UI = (function()
                         local b = create("TextButton", {
                             BackgroundColor3 = ui.colors.hover,
                             BackgroundTransparency = 1, Text = tostring(v),
-                            Font = Enum.Font.GothamBlack, TextSize = 13,
+                            Font = Enum.Font.GothamBlack, TextSize = 12,
                             TextXAlignment = Enum.TextXAlignment.Left,
                             TextColor3 = v == value and ui.colors.text or ui.colors.muted,
                             Size = UDim2.new(1, -3, 0, 24), LayoutOrder = i,
@@ -2902,7 +2904,7 @@ local UI = (function()
             end)
         end
 
-        local popup = ui:_makePopup(240, 302)
+        local popup = ui:_makePopup(240, 320)
         local function current()
             local hh = rainbow and (os.clock() * .1) % 1 or h
             local vv = fading and v * (.6 + .4 * (math.sin(os.clock() * 2) + 1) / 2) or v
@@ -2983,26 +2985,26 @@ local UI = (function()
 
         local hue = ui:_frame(popup, {
             BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0,
-            Position = UDim2.fromOffset(211, 10),
-            Size = UDim2.fromOffset(18, 168), Active = true,
+            Position = UDim2.fromOffset(10, 190),
+            Size = UDim2.fromOffset(219, 15), Active = true,
         })
         round(hue, 4)
         local hueColors = {}
         for i = 0, 6 do
             table.insert(hueColors, ColorSequenceKeypoint.new(i / 6, Color3.fromHSV(i / 6, 1, 1)))
         end
-        create("UIGradient", {Rotation = 90, Color = ColorSequence.new(hueColors)}, hue)
+        create("UIGradient", {Rotation = 0, Color = ColorSequence.new(hueColors)}, hue)
         local hueMarker = ui:_frame(hue, {
             BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.1,
             BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, .5),
             Size = UDim2.fromOffset(14, 14), ZIndex = 5, Active = false,
         })
-        hueMarker.Position = UDim2.fromScale(0.5, 0)
+        hueMarker.Position = UDim2.fromScale(0, 0.5)
         pill(hueMarker)
         ui:_stroke(hueMarker, "ink", 0).Thickness = 1.5
 
         local alphaBar = ui:_frame(popup, {
-            BorderSizePixel = 0, Position = UDim2.fromOffset(10, 190),
+            BorderSizePixel = 0, Position = UDim2.fromOffset(10, 215),
             Size = UDim2.fromOffset(219, 15), Active = true,
         })
         round(alphaBar, 4)
@@ -3019,11 +3021,11 @@ local UI = (function()
         ui:_stroke(am, "ink", 0).Thickness = 1.5
 
         local rgb = ui:_input(popup, "R, G, B, A", "")
-        rgb.Position = UDim2.fromOffset(10, 216)
+        rgb.Position = UDim2.fromOffset(10, 240)
         rgb.Size = UDim2.fromOffset(219, 28)
 
         local modeButton = ui:_button(popup, "Static")
-        modeButton.Position = UDim2.fromOffset(10, 256)
+        modeButton.Position = UDim2.fromOffset(10, 280)
         modeButton.Size = UDim2.fromOffset(219, 28)
         modeButton.TextXAlignment = Enum.TextXAlignment.Left
         pad(modeButton, 10, 28)
@@ -3055,7 +3057,7 @@ local UI = (function()
             safe(function()
                 sat.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromHSV(h, 1, 1))
                 ui:_tween(marker, {Position = UDim2.fromScale(s, 1 - v)}, .09, Enum.EasingStyle.Sine)
-                ui:_tween(hueMarker, {Position = UDim2.fromScale(0.5, h)}, .09, Enum.EasingStyle.Sine)
+                ui:_tween(hueMarker, {Position = UDim2.fromScale(h, 0.5)}, .09, Enum.EasingStyle.Sine)
                 ui:_tween(am, {Position = UDim2.fromScale(alpha, 0.5)}, .09, Enum.EasingStyle.Sine)
                 ui:_tween(alphaBar, {BackgroundColor3 = current()}, .12, Enum.EasingStyle.Sine)
                 if not rgb:IsFocused() then
@@ -3074,7 +3076,7 @@ local UI = (function()
                     s = math.clamp((input.Position.X - square.AbsolutePosition.X) / square.AbsoluteSize.X, 0, 1)
                     v = 1 - math.clamp((input.Position.Y - square.AbsolutePosition.Y) / square.AbsoluteSize.Y, 0, 1)
                 elseif active == "hue" then
-                    h = math.clamp((input.Position.Y - hue.AbsolutePosition.Y) / hue.AbsoluteSize.Y, 0, 1)
+                    h = math.clamp((input.Position.X - hue.AbsolutePosition.X) / hue.AbsoluteSize.X, 0, 1)
                 elseif active == "alpha" then
                     alpha = math.clamp((input.Position.X - alphaBar.AbsolutePosition.X) / alphaBar.AbsoluteSize.X, 0, 1)
                 end
@@ -3118,7 +3120,7 @@ local UI = (function()
         function obj:Open()
             safe(function()
                 refresh()
-                ui:_openPopup(swatch, popup, 240, 302, section.popupOwner)
+                ui:_openPopup(swatch, popup, 240, 320, section.popupOwner)
             end)
         end
         ui:_ownedConnect(row, swatch.Activated, function() safe(function() obj:Open() end) end)
@@ -3139,7 +3141,7 @@ local UI = (function()
                     local vv = fading and v * (.6 + .4 * (math.sin(os.clock() * 2) + 1) / 2) or v
                     sat.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromHSV(hh, 1, 1))
                     marker.Position = UDim2.fromScale(s, 1 - vv)
-                    hueMarker.Position = UDim2.fromScale(0.5, hh)
+                    hueMarker.Position = UDim2.fromScale(hh, 0.5)
                     am.Position = UDim2.fromScale(alpha, 0.5)
                 end
                 invoke(options.Callback, c, alpha, cachedMode)
@@ -3236,7 +3238,7 @@ local UI = (function()
         local toggle = self:Toggle(options)
         if toggle and toggle.Instance then
             toggle.Instance.Parent = row
-            toggle.Instance.Size = UDim2.new(1, -94, 1, 0)
+            toggle.Instance.Size = UDim2.new(1, -80, 1, 0)
         end
         local bind
         bind = self:Keybind({
@@ -3257,8 +3259,8 @@ local UI = (function()
             self.ui.keybindDirty = true
             if bind.Instance then
                 bind.Instance.Parent = row
-                bind.Instance.Position = UDim2.new(1, -94, 0, 0)
-                bind.Instance.Size = UDim2.fromOffset(94, 24)
+                bind.Instance.Position = UDim2.new(1, -80, 0, 0)
+                bind.Instance.Size = UDim2.fromOffset(80, 24)
                 bind.Button.Position = UDim2.fromScale(0, 0)
                 bind.Button.Size = UDim2.fromScale(1, 1)
                 for _, child in ipairs(bind.Instance:GetChildren()) do
@@ -3617,7 +3619,9 @@ local UI = (function()
                         if self.Attachments then
                             keybind.Instance.Parent = self.Attachments
                             keybind.Instance.BackgroundTransparency = 1
-                            keybind.Instance.Size = UDim2.fromOffset(64, 22)
+                            keybind.Instance.Size = UDim2.fromOffset(80, 22)
+                            keybind.Instance.AnchorPoint = Vector2.new(1, 0.5)
+                            keybind.Instance.Position = UDim2.new(1, 0, 0.5, 0)
                             if keybind.Button then
                                 keybind.Button.BackgroundTransparency = 1
                                 keybind.Button.TextXAlignment = Enum.TextXAlignment.Right
@@ -3630,8 +3634,8 @@ local UI = (function()
                             if self._relayoutAttachments then self:_relayoutAttachments() end
                         else
                             keybind.Instance.Parent = self.Instance
-                            keybind.Instance.Size = UDim2.fromOffset(94, 24)
-                            keybind.Instance.Position = UDim2.new(1, -94, 0, 0)
+                            keybind.Instance.Size = UDim2.fromOffset(80, 24)
+                            keybind.Instance.Position = UDim2.new(1, -80, 0, 0)
                         end
                         if keybind.Button then
                             keybind.Button.Position = UDim2.fromScale(0, 0)
@@ -3642,7 +3646,6 @@ local UI = (function()
                                 child.Visible = false
                             end
                         end
-                        -- keep only the key display text on the button
                         self.KeyPicker = keybind
                         section.ui.keybindDirty = true
                         if section.Resize then safe(function() section:Resize() end) end
@@ -3678,7 +3681,6 @@ local UI = (function()
                     end
 
                     local icon, tint = section.ui:_icon(gear, "settings", 17)
-                    -- height for 3 control rows (~22) + gaps(4) + pad(16)
                     local SETTINGS_H = 16 + 3 * 22 + 2 * 4
                     local popup = section.ui:_makePopup(250, SETTINGS_H)
                     local items = create("ScrollingFrame", {
@@ -4516,6 +4518,7 @@ local UI = (function()
         for _, properties in pairs(self.tweens) do
             for _, t in pairs(properties) do pcall(function() t:Cancel() end) end
         end
+        if self.blur then pcall(function() self.blur:Destroy() end) end
         table.clear(self.connections)
         table.clear(self.repaint)
         table.clear(self.colorUpdates)
