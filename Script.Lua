@@ -1,4 +1,4 @@
- -- Ui
+-- Ui
 
 local UI = (function()
     local Players       = game:GetService("Players")
@@ -3555,7 +3555,7 @@ local UI = (function()
                         gear.Position = UDim2.new(1, -22, 0.5, 5)
                     end
 
-                    local icon, tint = local _, tint = section.ui:_icon(gear, "settings", 17)
+                    local icon, tint = section.ui:_icon(gear, "settings", 17)
                     local gearStroke = section.ui:_stroke(gear, "accent", 1)
                     section.ui:_ownedConnect(self.Instance, gear.MouseEnter, function()
                         section.ui:_tween(gearStroke, {Transparency = .55}, .18)
