@@ -2060,10 +2060,10 @@ local UI = (function()
         })
         local attLayout = create("UIListLayout", {
             FillDirection = Enum.FillDirection.Horizontal,
-            HorizontalAlignment = Enum.HorizontalAlignment.Left,
+            HorizontalAlignment = Enum.HorizontalAlignment.Right,
             VerticalAlignment = Enum.VerticalAlignment.Center,
             SortOrder = Enum.SortOrder.LayoutOrder,
-            Padding = UDim.new(0, 4),
+            Padding = UDim.new(0, 6),
         }, attachments)
         attLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
             safe(function() caption.Size = UDim2.new(1, -34 - attachments.AbsoluteSize.X, 1, 0) end)
@@ -3470,7 +3470,7 @@ local UI = (function()
                     if self.Attachments then
                         color.Instance.Parent = self.Attachments
                         color.Instance.Size = UDim2.fromOffset(22, 22)
-                        color.Instance.LayoutOrder = 3 + #self.ColorPickers
+                        color.Instance.LayoutOrder = 10 + #self.ColorPickers
                         for _, child in ipairs(color.Instance:GetChildren()) do
                             if child:IsA("TextLabel") then child.Visible = false end
                         end
@@ -3481,15 +3481,15 @@ local UI = (function()
                             if child:IsA("TextLabel") then child.Visible = false end
                         end
                     end
-                    return color
+                    return self
                 end
                 function control:AddKeyPicker(childIndex, childOptions)
                     local keybind = section:_addIndexed("Keybind", childIndex, childOptions, "Keybind", self)
                     if childOptions and childOptions.SyncToggleState and self.Kind == "Toggle" then
                         if self.Attachments then
                             keybind.Instance.Parent = self.Attachments
-                            keybind.Instance.Size = UDim2.fromOffset(94, 22)
-                            keybind.Instance.LayoutOrder = 90
+                            keybind.Instance.Size = UDim2.fromOffset(70, 22)
+                            keybind.Instance.LayoutOrder = 50
                         else
                             keybind.Instance.Parent = self.Instance
                             keybind.Instance.Size = UDim2.fromOffset(94, 24)
@@ -3503,7 +3503,7 @@ local UI = (function()
                         self.KeyPicker = keybind
                         section.ui.keybindDirty = true
                     end
-                    return keybind
+                    return self
                 end
                 function control:AddSettings(childIndex, childOptions)
                     local gear = create("TextButton", {
@@ -3564,7 +3564,7 @@ local UI = (function()
                         end)
                     end)
                     self.GearButton = gear
-                    return settingsSection
+                    return self
                 end
                 function control:AddDropdown(childIndex, childOptions)
                     return section:_addIndexed("Dropdown", childIndex, childOptions, "Dropdown")
