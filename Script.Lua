@@ -560,7 +560,7 @@ local UI = (function()
         self.targetHealthBar.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
         round(self.targetHealthBar, 4)
 
-        local panel, header = self:_hudCard("Keybinds", UDim2.new(0, 12, .5, 0), Vector2.new(0, .5), 240, 40)
+        local panel, header = self:_hudCard("Keybinds", UDim2.new(0, 12, 0.5, 0), Vector2.new(0, 0), 240, 40)
         self.keybindPanel = panel
         panel.Visible = self.keybindListEnabled
         local title = self:_text(header, "Keybinds")
@@ -585,7 +585,7 @@ local UI = (function()
         self.keybindEmpty.Size = UDim2.new(1, -24, 0, 24)
         self.keybindEmpty.LayoutOrder = 1
 
-        local modPanel, modHeader = self:_hudCard("Moderators", UDim2.new(1, -12, .5, 0), Vector2.new(1, .5), 240, 90)
+        local modPanel, modHeader = self:_hudCard("Moderators", UDim2.new(1, -12, 0.5, 0), Vector2.new(1, 0), 240, 90)
         self.modPanel = modPanel
         self.modPanel.Visible = self.moderatorsEnabled
         local modTitle = self:_text(modHeader, "Moderators")
@@ -1021,31 +1021,19 @@ local UI = (function()
             self.modPanel.Size = UDim2.fromOffset(240, modHeight)
             self.modBody.Size = UDim2.new(1, 0, 0, moderatorListHeight)
 
+            -- keep top edges fixed so lists only grow downward
+            self.keybindPanel.AnchorPoint = Vector2.new(0, 0)
+            self.modPanel.AnchorPoint = Vector2.new(1, 0)
+
             if not self._hudInitPos then
                 self._hudInitPos = true
-                self.keybindPanel.AnchorPoint = Vector2.new(0, 0)
-                self.keybindPanel.Position = UDim2.new(0, 12, 0, 100)
-
-                self.modPanel.AnchorPoint = Vector2.new(1, 0)
-                self.modPanel.Position = UDim2.new(1, -12, 0, 100)
+                -- same vertical level, screen middle; grow only downward
+                self.keybindPanel.Position = UDim2.new(0, 12, 0.5, 0)
+                self.modPanel.Position = UDim2.new(1, -12, 0.5, 0)
 
                 self.targetHUD.AnchorPoint = Vector2.new(1, 0)
                 if not (self.targetDragEntry and self.targetDragEntry.userMoved) then
-                    self.targetHUD.Position = UDim2.new(
-                        1, -12, 0,
-                        100 + modHeight + 12
-                    )
-                    self._lastModHeight = modHeight
-                end
-            end
-
-            if not (self.targetDragEntry and self.targetDragEntry.userMoved) then
-                if self._lastModHeight ~= modHeight then
-                    self._lastModHeight = modHeight
-                    self.targetHUD.Position = UDim2.new(
-                        1, -12, 0,
-                        100 + modHeight + 12
-                    )
+                    self.targetHUD.Position = UDim2.new(1, -12, 0.5, 120)
                 end
             end
 
@@ -3191,19 +3179,26 @@ local UI = (function()
             if elapsed < 1 / 30 then return end
             elapsed = 0
             safe(function()
-                local c = current()
-                swatch.BackgroundColor3 = c
+                local col = current()
+                swatch.BackgroundColor3 = col
                 swatch.BackgroundTransparency = 1 - alpha
-                alphaBar.BackgroundColor3 = c
-                if shown(popup) then
+                alphaBar.BackgroundColor3 = col
+                -- skip handle updates while dragging to avoid jitter
+                if shown(popup) and not active then
                     local hh = rainbow and (os.clock() * .1) % 1 or h
                     local vv = fading and v * (.6 + .4 * (math.sin(os.clock() * 2) + 1) / 2) or v
                     sat.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromHSV(hh, 1, 1))
-                    marker.Position = UDim2.fromScale(s, 1 - vv)
-                    hueMarker.Position = UDim2.fromScale(0.5, hh)
-                    am.Position = UDim2.fromScale(alpha, 0.5)
+                    if active ~= "square" then
+                        marker.Position = UDim2.fromScale(s, 1 - vv)
+                    end
+                    if active ~= "hue" then
+                        hueMarker.Position = UDim2.fromScale(0.5, hh)
+                    end
+                    if active ~= "alpha" then
+                        am.Position = UDim2.fromScale(alpha, 0.5)
+                    end
                 end
-                invoke(options.Callback, c, alpha, cachedMode)
+                invoke(options.Callback, col, alpha, cachedMode)
             end)
         end
         table.insert(ui.colorUpdates, animate)
@@ -4590,7 +4585,7 @@ local UI = (function()
     end
 
     UI.Section = Section
-    UI.Version = "2.2.2"
+    UI.Version = "2.2.3"
     UI.Description = "SkidUi interface library"
     return UI
 end)()
