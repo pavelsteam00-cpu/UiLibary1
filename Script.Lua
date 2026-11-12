@@ -2189,6 +2189,9 @@ local UI = (function()
         local ui = section.ui
         local minimum, maximum = options.Min or 0, options.Max or 100
         if maximum <= minimum then return end
+        if options.Step == nil and tonumber(options.Rounding) then
+            options.Step = 10 ^ -math.max(0, tonumber(options.Rounding))
+        end
         local step = math.max(tonumber(options.Step) or 1, 1e-6)
         local compact = options.Compact == true
         local row = section:_row(compact and 40 or 48)
@@ -4598,7 +4601,7 @@ local UI = (function()
     end
 
     UI.Section = Section
-    UI.Version = "2.2.6"
+    UI.Version = "2.2.7"
     UI.Description = "SkidUi interface library"
     return UI
 end)()
