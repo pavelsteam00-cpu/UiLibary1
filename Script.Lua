@@ -2685,32 +2685,34 @@ local UI = (function()
                         choice.TextColor3 = disabledChoice and ui.colors.outline
                             or (choice:GetAttribute("Selected") and ui.colors.text or ui.colors.muted)
                         choice.BackgroundTransparency = selected and 0 or 1
-                        choice.TextTransparency = .6
                         choice.Active = not disabledChoice
-                        ui:_tween(choice, {TextTransparency = 0}, .25)
-                        local function paintChoice(hovered)
-                            local selected = choice:GetAttribute("Selected") == true
-                            local disabled = choice:GetAttribute("DisabledChoice") == true
-                            if selected then
-                                ui:_tween(choice, {
-                                    TextColor3 = ui.colors.text,
-                                    BackgroundTransparency = 0,
-                                    BackgroundColor3 = ui.colors.hover,
-                                }, .2)
-                            elseif hovered and not disabled then
-                                ui:_tween(choice, {
-                                    TextColor3 = ui.colors.text,
-                                    BackgroundTransparency = 0.9,
-                                    BackgroundColor3 = ui.colors.hover,
-                                }, .2)
-                            else
-                                ui:_tween(choice, {
-                                    TextColor3 = disabled and ui.colors.outline or ui.colors.muted,
-                                    BackgroundTransparency = 1,
-                                    BackgroundColor3 = ui.colors.hover,
-                                }, .2)
+                        local function cancelTweens()
+                            local bag = ui.tweens and ui.tweens[choice]
+                            if bag then
+                                for _, tw in pairs(bag) do
+                                    pcall(function() tw:Cancel() end)
+                                end
+                                ui.tweens[choice] = {}
                             end
                         end
+                        local function paintChoice(hovered)
+                            cancelTweens()
+                            local selected = choice:GetAttribute("Selected") == true
+                            local disabled = choice:GetAttribute("DisabledChoice") == true
+                            choice.BackgroundColor3 = ui.colors.hover
+                            if selected then
+                                choice.TextColor3 = ui.colors.text
+                                choice.BackgroundTransparency = 0
+                            elseif hovered and not disabled then
+                                choice.TextColor3 = ui.colors.text
+                                choice.BackgroundTransparency = 0.9
+                            else
+                                choice.TextColor3 = disabled and ui.colors.outline or ui.colors.muted
+                                choice.BackgroundTransparency = 1
+                            end
+                            choice.TextTransparency = 0
+                        end
+                        paintChoice(false)
                         choice.MouseEnter:Connect(function()
                             safe(function() paintChoice(true) end)
                         end)
@@ -2802,19 +2804,18 @@ local UI = (function()
                 for _, b in ipairs(scroll:GetChildren()) do
                     if b:IsA("TextButton") then
                         local selected = choices[b:GetAttribute("ChoiceIndex")] == value
-                        b:SetAttribute("Selected", selected)
-                        local props = {
-                            TextColor3 = selected and ui.colors.text or ui.colors.muted,
-                            BackgroundTransparency = selected and 0 or 1,
-                            BackgroundColor3 = ui.colors.hover,
-                        }
-                        if silent then
-                            b.TextColor3 = props.TextColor3
-                            b.BackgroundTransparency = props.BackgroundTransparency
-                            b.BackgroundColor3 = props.BackgroundColor3
-                        else
-                            ui:_tween(b, props, .3)
+                        b:SetAttribute("Selected", selected == true)
+                        local bag = ui.tweens and ui.tweens[b]
+                        if bag then
+                            for _, tw in pairs(bag) do
+                                pcall(function() tw:Cancel() end)
+                            end
+                            ui.tweens[b] = {}
                         end
+                        b.BackgroundColor3 = ui.colors.hover
+                        b.TextColor3 = selected and ui.colors.text or ui.colors.muted
+                        b.BackgroundTransparency = selected and 0 or 1
+                        b.TextTransparency = 0
                     end
                 end
                 if not silent then invoke(options.Callback, value) end
@@ -2854,30 +2855,32 @@ local UI = (function()
                             b.BackgroundTransparency = 1
                         end
                         b:SetAttribute("ChoiceIndex", i)
-                        b.TextTransparency = .5
-                        ui:_tween(b, {TextTransparency = 0}, .25)
-                        local function paintChoice(hovered)
-                            local selected = b:GetAttribute("Selected") == true
-                            if selected then
-                                ui:_tween(b, {
-                                    TextColor3 = ui.colors.text,
-                                    BackgroundTransparency = 0,
-                                    BackgroundColor3 = ui.colors.hover,
-                                }, .2)
-                            elseif hovered then
-                                ui:_tween(b, {
-                                    TextColor3 = ui.colors.text,
-                                    BackgroundTransparency = 0.9,
-                                    BackgroundColor3 = ui.colors.hover,
-                                }, .2)
-                            else
-                                ui:_tween(b, {
-                                    TextColor3 = ui.colors.muted,
-                                    BackgroundTransparency = 1,
-                                    BackgroundColor3 = ui.colors.hover,
-                                }, .2)
+                        local function cancelTweens()
+                            local bag = ui.tweens and ui.tweens[b]
+                            if bag then
+                                for _, tw in pairs(bag) do
+                                    pcall(function() tw:Cancel() end)
+                                end
+                                ui.tweens[b] = {}
                             end
                         end
+                        local function paintChoice(hovered)
+                            cancelTweens()
+                            local selected = b:GetAttribute("Selected") == true
+                            b.BackgroundColor3 = ui.colors.hover
+                            if selected then
+                                b.TextColor3 = ui.colors.text
+                                b.BackgroundTransparency = 0
+                            elseif hovered then
+                                b.TextColor3 = ui.colors.text
+                                b.BackgroundTransparency = 0.9
+                            else
+                                b.TextColor3 = ui.colors.muted
+                                b.BackgroundTransparency = 1
+                            end
+                            b.TextTransparency = 0
+                        end
+                        paintChoice(false)
                         b.Activated:Connect(function() safe(function() obj:Set(v) end) end)
                         b.MouseEnter:Connect(function()
                             safe(function() paintChoice(true) end)
@@ -2896,11 +2899,18 @@ local UI = (function()
             safe(function()
                 for _, b in ipairs(scroll:GetChildren()) do
                     if b:IsA("TextButton") then
-                        local selected = b:GetAttribute("Selected")
-                        ui:_tween(b, {
-                            TextColor3 = selected and ui.colors.text or ui.colors.muted,
-                            BackgroundTransparency = selected and 0 or 1
-                        }, .3)
+                        local selected = b:GetAttribute("Selected") == true
+                        local bag = ui.tweens and ui.tweens[b]
+                        if bag then
+                            for _, tw in pairs(bag) do
+                                pcall(function() tw:Cancel() end)
+                            end
+                            ui.tweens[b] = {}
+                        end
+                        b.TextColor3 = selected and ui.colors.text or ui.colors.muted
+                        b.BackgroundTransparency = selected and 0 or 1
+                        b.BackgroundColor3 = ui.colors.hover
+                        b.TextTransparency = 0
                     end
                 end
             end)
@@ -4588,7 +4598,7 @@ local UI = (function()
     end
 
     UI.Section = Section
-    UI.Version = "2.2.5"
+    UI.Version = "2.2.6"
     UI.Description = "SkidUi interface library"
     return UI
 end)()
