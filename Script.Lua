@@ -2945,7 +2945,14 @@ local UI = (function()
 
         local base = options.Default or Color3.fromRGB(255, 255, 255)
         local h, s, v = base:ToHSV()
-        local alpha = clamp(options.Alpha == nil and 1 or options.Alpha, 0, 1)
+        local alpha
+        if options.Alpha ~= nil then
+            alpha = clamp(options.Alpha, 0, 1)
+        elseif options.Transparency ~= nil then
+            alpha = clamp(1 - tonumber(options.Transparency), 0, 1)
+        else
+            alpha = 1
+        end
         local rainbow, fading = false, false
         local obj = {Instance = row, Swatch = swatch}
         local refresh
@@ -2977,6 +2984,9 @@ local UI = (function()
             return {
                 r = math.round(base.R * 255), g = math.round(base.G * 255),
                 b = math.round(base.B * 255), a = alpha,
+                Alpha = alpha,
+                Transparency = 1 - alpha,
+                Visibility = alpha,
                 rainbow = rainbow, fading = fading, mode = cachedMode,
             }
         end
