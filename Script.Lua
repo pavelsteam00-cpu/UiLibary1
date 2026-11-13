@@ -1170,7 +1170,6 @@ local UI = (function()
             Labels        = {}, Buttons = {}, namedControls = {},
             configs       = {}, deletedConfigs = {}, memoryConfigs = {}, unloadCallbacks = {},
             keybinds      = {}, dragItems = {}, popups = {},
-            colorUpdates  = {},
             tweens        = setmetatable({}, {__mode = "k"}),
             easing        = Enum.EasingStyle.Quint,
             visible       = true,
@@ -1455,7 +1454,6 @@ local UI = (function()
 
         self:_connect(RunService.Heartbeat, function(dt)
             safe(function()
-                for _, update in ipairs(self.colorUpdates) do safe(update, dt) end
                 self.statsElapsed = self.statsElapsed + dt
                 if self.statsElapsed >= 1 then
                     self.statsElapsed = self.statsElapsed % 1
@@ -1996,26 +1994,30 @@ local UI = (function()
         if self.destroyed or not page or not tab or tab.page ~= page then return end
         safe(function()
             local old = self.selectedTab
-            if old == tab then return end
-            self:ClosePopup()
-            self.selectedPage = page
-            self.selectedTab = tab
-            page.lastTab = tab
-            self.keybindDirty = true
-            self.selectToken = (self.selectToken or 0) + 1
             local pageChanged = old and old.page ~= page
             local direction = 1
-            if old then
+            if old and old ~= tab then
                 local items = pageChanged and self.pages or page.tabs
                 local from = table.find(items, pageChanged and old.page or old) or 1
                 local to = table.find(items, pageChanged and page or tab) or 1
                 direction = to >= from and 1 or -1
             end
-            local dx, dy = pageChanged and 0 or 18 * direction, pageChanged and 14 * direction or 0
+            self.selectedPage = page
+            self.selectedTab = tab
+            page.lastTab = tab
+            self.keybindDirty = true
+            self.selectToken = (self.selectToken or 0) + 1
             for _, p in ipairs(self.pages) do
                 for _, t in ipairs(p.tabs) do
                     t.slot.Visible = p == page
                     t.button:SetAttribute("Selected", t == tab)
+                end
+            end
+            if old == tab then return end
+            self:ClosePopup()
+            local dx, dy = pageChanged and 0 or 18 * direction, pageChanged and 14 * direction or 0
+            for _, p in ipairs(self.pages) do
+                for _, t in ipairs(p.tabs) do
                     t.transitionToken = (t.transitionToken or 0) + 1
                     local active = self.tweens[t.body]
                     if active then
@@ -2072,7 +2074,8 @@ local UI = (function()
             }, .45, Enum.EasingStyle.Quint)
         end)
     end
-        function Section:_row(height, parent)
+
+    function Section:_row(height, parent)
         self.counter = (self.counter or 0) + 1
         return self.ui:_frame(parent or self.items, {
             BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, height or 24),
@@ -3009,101 +3012,23 @@ local UI = (function()
             initialAlpha = 1 - clamp(options.Transparency, 0, 1)
         end
         local alpha = clamp(initialAlpha == nil and 1 or initialAlpha, 0, 1)
-        local rainbow, fading = false, false
         local obj = {Instance = row, Swatch = swatch}
         local refresh
-        local modeButtons = {}
-        local cachedMode = "Static"
-
         local active, touch
-        local animActive = false
-        local animRegistered = false
-        local animTime = 0
-        local animElapsed = 0
-        local animLastR, animLastG, animLastB = -1, -1, -1
 
-        local function computeMode()
-            if rainbow then return fading and "Rainbow,Fading" or "Rainbow" end
-            return fading and "Fading" or "Static"
-        end
-
-        local function current()
-            local hh = rainbow and (animTime * .15) % 1 or h
-            local vv = fading and v * (.6 + .4 * (math.sin(animTime * 3) + 1) / 2) or v
-            return Color3.fromHSV(hh, s, vv)
-        end
-
-        local function paintModes()
-            safe(function()
-                for name, button in pairs(modeButtons) do
-                    local on = (name == "Rainbow" and rainbow) or (name == "Fading" and fading)
-                    button:SetAttribute("Selected", on == true)
-                    ui:_tween(button, {TextColor3 = on and ui.colors.ink or ui.colors.muted}, .25)
-                end
-            end)
-        end
-
-        local popup = ui:_makePopup(240, 292)
-
-        local animatorTick = function(dt)
-            if not animActive then return end
-            animTime = animTime + dt
-            animElapsed = animElapsed + dt
-            if animElapsed < 0.033 then return end
-            animElapsed = 0
-            local col = current()
-            local r, g, b = col.R, col.G, col.B
-            if r == animLastR and g == animLastG and b == animLastB then return end
-            animLastR, animLastG, animLastB = r, g, b
-            safe(function()
-                if swatch.Parent then
-                    swatch.BackgroundColor3 = col
-                    swatch.BackgroundTransparency = 1 - alpha
-                end
-                if shown(popup) and not active then
-                    local ch, cs, cv = col:ToHSV()
-                    alphaBar.BackgroundColor3 = col
-                    sat.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromHSV(ch, 1, 1))
-                    marker.Position = UDim2.fromScale(s, 1 - cv)
-                    hueMarker.Position = UDim2.fromScale(0.5, ch)
-                    am.Position = UDim2.fromScale(alpha, 0.5)
-                end
-                invoke(options.Callback, col, alpha, cachedMode)
-            end)
-        end
-
-        local function setAnimation(on)
-            if not animatorTick then return end
-            if on and not animActive then
-                animActive = true
-                animElapsed = 0
-                animLastR, animLastG, animLastB = -1, -1, -1
-                if not animRegistered then
-                    table.insert(ui.colorUpdates, animatorTick)
-                    animRegistered = true
-                end
-            elseif not on and animActive then
-                animActive = false
-                if animRegistered then
-                    local idx = table.find(ui.colorUpdates, animatorTick)
-                    if idx then table.remove(ui.colorUpdates, idx) end
-                    animRegistered = false
-                end
-            end
-        end
+        local popup = ui:_makePopup(240, 250)
 
         function obj:Get()
             return {
                 r = base.R * 255, g = base.G * 255, b = base.B * 255,
-                a = alpha, rainbow = rainbow, fading = fading, mode = cachedMode,
+                a = alpha, mode = "Static",
             }
         end
 
         local function changed(silent)
             safe(function()
                 base = Color3.fromHSV(h, s, v)
-                cachedMode = computeMode()
-                local col = current()
+                local col = base
                 local trans = 1 - alpha
                 if silent then
                     swatch.BackgroundColor3 = col
@@ -3112,9 +3037,7 @@ local UI = (function()
                     ui:_tween(swatch, {BackgroundColor3 = col, BackgroundTransparency = trans}, .2, Enum.EasingStyle.Sine)
                 end
                 if refresh and popup.Visible then refresh() end
-                paintModes()
-                setAnimation(rainbow or fading)
-                if not silent then invoke(options.Callback, col, alpha, cachedMode) end
+                if not silent then invoke(options.Callback, col, alpha, "Static") end
             end)
         end
 
@@ -3129,10 +3052,6 @@ local UI = (function()
                         clamp(value.b or value[3], 0, 255)
                     ):ToHSV()
                     if value.a ~= nil then alpha = clamp(value.a, 0, 1) end
-                    rainbow = value.rainbow == true
-                        or (type(value.mode) == "string" and value.mode:find("Rainbow", 1, true) ~= nil)
-                    fading = value.fading == true
-                        or (type(value.mode) == "string" and value.mode:find("Fading", 1, true) ~= nil)
                 else
                     return
                 end
@@ -3205,49 +3124,18 @@ local UI = (function()
         rgb.Position = UDim2.fromOffset(10, 213)
         rgb.Size = UDim2.fromOffset(219, 28)
 
-        local modeButton = ui:_button(popup, "Static")
-        modeButton.Position = UDim2.fromOffset(10, 251)
-        modeButton.Size = UDim2.fromOffset(219, 28)
-        modeButton.TextXAlignment = Enum.TextXAlignment.Left
-        pad(modeButton, 10, 28)
-        local arrow = ui:_icon(modeButton, "chevron", 12)
-        arrow.Position = UDim2.new(1, -14, .5, 0)
-
-        local modes = ui:_makePopup(219, 58)
-        for i, name in ipairs({"Rainbow", "Fading"}) do
-            local nameCopy = name
-            local b = ui:_button(modes, name)
-            modeButtons[nameCopy] = b
-            b.Position = UDim2.fromOffset(5, 4 + (i - 1) * 26)
-            b.Size = UDim2.new(1, -10, 0, 24)
-            b.TextXAlignment = Enum.TextXAlignment.Left
-            pad(b, 7, 7)
-            ui:_ownedConnect(row, b.Activated, function()
-                safe(function()
-                    if nameCopy == "Rainbow" then rainbow = not rainbow
-                    else fading = not fading end
-                    cachedMode = computeMode()
-                    paintModes()
-                    changed(false)
-                    refresh()
-                end)
-            end)
-        end
-
         refresh = function()
             safe(function()
-                local col = current()
-                local ch, cs, cv = col:ToHSV()
-                sat.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromHSV(ch, 1, 1))
-                ui:_tween(marker, {Position = UDim2.fromScale(s, 1 - cv)}, .15, Enum.EasingStyle.Sine)
-                ui:_tween(hueMarker, {Position = UDim2.fromScale(0.5, ch)}, .15, Enum.EasingStyle.Sine)
+                local col = Color3.fromHSV(h, s, v)
+                sat.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromHSV(h, 1, 1))
+                ui:_tween(marker, {Position = UDim2.fromScale(s, 1 - v)}, .15, Enum.EasingStyle.Sine)
+                ui:_tween(hueMarker, {Position = UDim2.fromScale(0.5, h)}, .15, Enum.EasingStyle.Sine)
                 ui:_tween(am, {Position = UDim2.fromScale(alpha, 0.5)}, .15, Enum.EasingStyle.Sine)
                 ui:_tween(alphaBar, {BackgroundColor3 = col}, .2, Enum.EasingStyle.Sine)
                 if not rgb:IsFocused() then
                     local c = obj:Get()
                     rgb.Text = string.format("%d, %d, %d, %.2f", c.r, c.g, c.b, alpha)
                 end
-                modeButton.Text = cachedMode:gsub(",", ", ")
             end)
         end
 
@@ -3289,31 +3177,23 @@ local UI = (function()
             safe(function()
                 local r, g, b, a = rgb.Text:match("^%s*([%d%.]+)%s*,%s*([%d%.]+)%s*,%s*([%d%.]+)%s*,?%s*([%d%.]*)%s*$")
                 if tonumber(r) and tonumber(g) and tonumber(b) then
-                    obj:Set({r = r, g = g, b = b, a = tonumber(a) or alpha, rainbow = rainbow, fading = fading})
+                    obj:Set({r = r, g = g, b = b, a = tonumber(a) or alpha})
                 end
                 refresh()
             end)
-        end)
-        ui:_ownedConnect(row, modeButton.Activated, function()
-            safe(function() ui:_openPopup(modeButton, modes, 219, 58, popup) end)
         end)
 
         local section = self
         function obj:Open()
             safe(function()
                 refresh()
-                ui:_openPopup(swatch, popup, 240, 292, section.popupOwner)
+                ui:_openPopup(swatch, popup, 240, 250, section.popupOwner)
             end)
         end
         ui:_ownedConnect(row, swatch.Activated, function() safe(function() obj:Open() end) end)
 
-        table.insert(ui.repaint, paintModes)
         row.Destroying:Once(function()
-            setAnimation(false)
-            local idx = table.find(ui.repaint, paintModes)
-            if idx then table.remove(ui.repaint, idx) end
             pcall(function() popup:Destroy() end)
-            pcall(function() modes:Destroy() end)
         end)
 
         changed(true)
@@ -4647,11 +4527,10 @@ local UI = (function()
                         if not present then value = widget:Get() end
                         if type(value) ~= "table" then return false, "Invalid value: " .. flag end
                         local colorData = table.clone(value)
-                        local dynamic = colorData.rainbow or colorData.fading
-                            or (type(colorData.mode) == "string" and colorData.mode ~= "Static")
-                        if not dynamic then
-                            colorData.r, colorData.g, colorData.b = themeColor.R * 255, themeColor.G * 255, themeColor.B * 255
-                        end
+                        colorData.r, colorData.g, colorData.b = themeColor.R * 255, themeColor.G * 255, themeColor.B * 255
+                        colorData.rainbow = nil
+                        colorData.fading = nil
+                        colorData.mode = "Static"
                         value, present = colorData, true
                     end
                     if present then
@@ -4844,7 +4723,6 @@ local UI = (function()
         if self.blur then pcall(function() self.blur:Destroy() end) end
         table.clear(self.connections)
         table.clear(self.repaint)
-        table.clear(self.colorUpdates)
         pcall(function() self.gui:Destroy() end)
         table.clear(self.bindings)
         table.clear(self.keybinds)
@@ -4852,7 +4730,7 @@ local UI = (function()
     end
 
     UI.Section = Section
-    UI.Version = "2.2.6"
+    UI.Version = "2.3.0"
     UI.Description = "SkidUi interface library"
     return UI
 end)()
