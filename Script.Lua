@@ -1,5 +1,3 @@
--- UI SOURCE
-
 local UI = (function()
     local Players       = game:GetService("Players")
     local Teams         = game:GetService("Teams")
@@ -18,6 +16,19 @@ local UI = (function()
         if type(fn) ~= "function" then return false end
         local ok, err = pcall(fn, ...)
         return ok, err
+    end
+
+    local WHITE = Color3.fromRGB(255, 255, 255)
+
+    local function configOperation(callback)
+        local ok, success, err = pcall(callback)
+        if not ok then return false, tostring(success) end
+        return success, err
+    end
+
+    local function finite(value)
+        return type(value) == "number" and value == value
+            and value > -math.huge and value < math.huge
     end
 
     local defaults = {
@@ -64,6 +75,9 @@ local UI = (function()
             for k, v in pairs(properties) do
                 pcall(function() x[k] = v end)
             end
+        end
+        if class == "ImageLabel" or class == "ImageButton" then
+            x.ImageColor3 = WHITE
         end
         if parent then
             pcall(function() x.Parent = parent end)
@@ -175,7 +189,8 @@ local UI = (function()
     end
 
     local function cleanName(s)
-        s = tostring(s or "default"):gsub("[^%w_%-]", "_"):sub(1, 48)
+        s = tostring(s or "default"):gsub("^%s+", ""):gsub("%s+$", "")
+        s = s:gsub("%.[jJ][sS][oO][nN]$", ""):gsub("[^%w_%-]", "_"):sub(1, 48)
         if s == "auto" then s = "_auto" end
         return s ~= "" and s or "default"
     end
@@ -192,6 +207,7 @@ local UI = (function()
 
     function UI:_tween(x, props, duration, style, instant)
         if self.destroyed or not x or not x.Parent then return end
+        instant = instant or self._instantUpdate == true
         safe(function()
             local active = self.tweens[x]
             if not active then active = {}; self.tweens[x] = active end
@@ -238,6 +254,10 @@ local UI = (function()
 
     function UI:_bind(x, property, role, transform)
         if not x then return end
+        if property == "ImageColor3" then
+            x.ImageColor3 = WHITE
+            return
+        end
         local entry = {x = x, property = property, role = role, transform = transform}
         table.insert(self.bindings, entry)
         safe(function()
@@ -355,19 +375,11 @@ local UI = (function()
         })
         create("UIScale", {Scale = (tonumber(size) or 20) / 26}, root)
 
-        local tint = create("Color3Value", {Name = "Tint"}, root)
-        self:_bind(tint, "Value", role or "muted")
-
         local sprite = create("ImageLabel", {
             Name = "IconImage", BackgroundTransparency = 1,
-            BorderSizePixel = 0, Image = image, ImageColor3 = tint.Value,
+            BorderSizePixel = 0, Image = image, ImageColor3 = WHITE,
             Size = UDim2.fromScale(1, 1), ZIndex = 5, Active = false,
         }, root)
-
-        local c = self:_connect(tint.Changed, function(color)
-            safe(function() if sprite then sprite.ImageColor3 = color end end)
-        end)
-        if c then table.insert(owned, c) end
 
         root.Destroying:Once(function()
             for _, connection in ipairs(owned) do
@@ -375,13 +387,10 @@ local UI = (function()
                 local index = table.find(self.connections, connection)
                 if index then table.remove(self.connections, index) end
             end
-            for i = #self.bindings, 1, -1 do
-                if self.bindings[i].x == tint then table.remove(self.bindings, i) end
-            end
         end)
 
-        return root, function(color)
-            if root.Parent then self:_tween(tint, {Value = color}, .3) end
+        return root, function()
+            if sprite.Parent then sprite.ImageColor3 = WHITE end
         end
     end
 
@@ -477,6 +486,41 @@ local UI = (function()
         return panel, header
     end
 
+    function UI:_hudTitle(header, text, counter, icon)
+        local left = icon and 36 or 12
+        if icon then
+            local holder = self:_frame(header, {
+                BackgroundTransparency = 1, BorderSizePixel = 0,
+                Position = UDim2.fromOffset(12, 9),
+                Size = UDim2.fromOffset(14, 14), ZIndex = 3,
+            })
+            self:_icon(holder, icon, 14)
+        end
+        local title = self:_text(header, text, 12, "text")
+        title.Name = "Title"
+        title.Position = UDim2.fromOffset(left, 0)
+        title.Size = UDim2.new(1, -(left + (counter and 64 or 12)), 0, 32)
+        title.TextXAlignment = Enum.TextXAlignment.Left
+        title.TextYAlignment = Enum.TextYAlignment.Center
+        title.TextWrapped = false
+        title.TextTruncate = Enum.TextTruncate.AtEnd
+        title.ClipsDescendants = true
+        title.ZIndex = 3
+        if not counter then return title end
+        local count = self:_text(header, "0", 11, "muted")
+        count.Name = "Count"
+        count.AnchorPoint = Vector2.new(1, 0)
+        count.Position = UDim2.new(1, -12, 0, 0)
+        count.Size = UDim2.fromOffset(44, 32)
+        count.TextXAlignment = Enum.TextXAlignment.Right
+        count.TextYAlignment = Enum.TextYAlignment.Center
+        count.TextWrapped = false
+        count.TextTruncate = Enum.TextTruncate.AtEnd
+        count.ClipsDescendants = true
+        count.ZIndex = 3
+        return title, count
+    end
+
     function UI:_createHUD(options)
         self.hudLayer = self:_frame(self.root, {
             Name = "Hud", BackgroundTransparency = 1,
@@ -521,16 +565,7 @@ local UI = (function()
         self.targetHUD.Visible = self.targetHUDEnabled
         self.targetHUDHeight = targetHUDHeight
 
-        local tIcon = self:_frame(tHeader, {
-            BackgroundTransparency = 1,
-            Position = UDim2.fromOffset(12, 9),
-            Size = UDim2.fromOffset(14, 14),
-        })
-        self:_icon(tIcon, "person", 14, "accent")
-
-        local tTitle = self:_text(tHeader, "Target HUD")
-        tTitle.Position = UDim2.fromOffset(34, 0)
-        tTitle.Size = UDim2.new(1, -46, 1, 0)
+        self:_hudTitle(tHeader, "Target HUD", false, "person")
 
         self.targetAvatar = create("ImageLabel", {
             BackgroundColor3 = Color3.fromRGB(20, 20, 20),
@@ -572,13 +607,8 @@ local UI = (function()
         local panel, header = self:_hudCard("Keybinds", UDim2.new(0, 12, 0.5, 0), Vector2.new(0, 0), 240, 40)
         self.keybindPanel = panel
         panel.Visible = self.keybindListEnabled
-        local title = self:_text(header, "Keybinds")
-        title.Position = UDim2.fromOffset(12, 0)
-        title.Size = UDim2.new(1, -60, 1, 0)
-        self.keybindCount = self:_text(header, "0", 11, "muted")
-        self.keybindCount.TextXAlignment = Enum.TextXAlignment.Right
-        self.keybindCount.Position = UDim2.new(1, -46, 0, 0)
-        self.keybindCount.Size = UDim2.fromOffset(34, 32)
+        local title
+        title, self.keybindCount = self:_hudTitle(header, "Keybinds", true)
         
         self.keybindBody = create("ScrollingFrame", {
             BackgroundTransparency = 1, BorderSizePixel = 0,
@@ -589,21 +619,20 @@ local UI = (function()
         self:_bind(self.keybindBody, "ScrollBarImageColor3", "accent")
         layout(self.keybindBody, 0)
         
-        self.keybindEmpty = self:_text(self.keybindBody, "None", 11, "muted")
-        self.keybindEmpty.Position = UDim2.fromOffset(12, 0)
-        self.keybindEmpty.Size = UDim2.new(1, -24, 0, 24)
-        self.keybindEmpty.LayoutOrder = 1
+        self.keybindEmpty = self:_frame(self.keybindBody, {
+            BackgroundTransparency = 1, BorderSizePixel = 0,
+            Size = UDim2.new(1, 0, 0, 24), LayoutOrder = 1,
+        })
+        local emptyText = self:_text(self.keybindEmpty, "None", 11, "muted")
+        emptyText.Position = UDim2.fromOffset(12, 0)
+        emptyText.Size = UDim2.new(1, -24, 1, 0)
+        emptyText.TextTruncate = Enum.TextTruncate.AtEnd
 
         local modPanel, modHeader = self:_hudCard("Moderators", UDim2.new(1, -12, 0.5, 0), Vector2.new(1, 0), 240, 90)
         self.modPanel = modPanel
         self.modPanel.Visible = self.moderatorsEnabled
-        local modTitle = self:_text(modHeader, "Moderators")
-        modTitle.Position = UDim2.fromOffset(12, 0)
-        modTitle.Size = UDim2.new(1, -60, 1, 0)
-        self.modCount = self:_text(modHeader, "0", 11, "muted")
-        self.modCount.TextXAlignment = Enum.TextXAlignment.Right
-        self.modCount.Position = UDim2.new(1, -46, 0, 0)
-        self.modCount.Size = UDim2.fromOffset(34, 32)
+        local modTitle
+        modTitle, self.modCount = self:_hudTitle(modHeader, "Moderators", true)
         
         self.modBody = create("ScrollingFrame", {
             BackgroundTransparency = 1, BorderSizePixel = 0,
@@ -1139,7 +1168,7 @@ local UI = (function()
             widgets       = {}, features = {}, pages = {},
             Tabs          = {}, Options = {}, Toggles = {},
             Labels        = {}, Buttons = {}, namedControls = {},
-            configs       = {}, unloadCallbacks = {},
+            configs       = {}, deletedConfigs = {}, memoryConfigs = {}, unloadCallbacks = {},
             keybinds      = {}, dragItems = {}, popups = {},
             colorUpdates  = {},
             tweens        = setmetatable({}, {__mode = "k"}),
@@ -1469,6 +1498,9 @@ local UI = (function()
                 local b = self.bindings[i]
                 if not b.x or not b.x.Parent then
                     table.remove(self.bindings, i)
+                elseif b.property == "ImageColor3" then
+                    b.x.ImageColor3 = WHITE
+                    table.remove(self.bindings, i)
                 elseif b.role == role then
                     local value = color
                     if b.transform then
@@ -1479,7 +1511,8 @@ local UI = (function()
                 end
             end
 
-            local fireRepaint = not rapid or not self._lastRepaintCall or (now - self._lastRepaintCall) >= 0.2
+            local fireRepaint = not self._themeBatch and (instant or self._instantUpdate
+                or not rapid or not self._lastRepaintCall or (now - self._lastRepaintCall) >= 0.2)
             if fireRepaint then
                 self._lastRepaintCall = now
                 for _, f in ipairs(self.repaint) do safe(f) end
@@ -1683,16 +1716,15 @@ local UI = (function()
         options = options or {}
         if not obj or not obj.Instance then return obj end
         safe(function()
-            local base = options.Flag or (section.path .. "/" .. kind .. "/" .. tostring(title or kind))
+            local legacy = section.path .. "/" .. kind .. "/" .. tostring(title or kind)
+            local base = tostring(options.Flag or legacy)
+            if base == "" then base = legacy end
             local flag = base
             local i = 2
-            if not options.Flag then
-                while self.widgets[flag] do
-                    flag = base .. "#" .. i
-                    i = i + 1
-                end
+            while self.widgets[flag] do
+                flag = base .. "#" .. i
+                i = i + 1
             end
-            if self.widgets[flag] then return end
 
             function obj:SetVisible(value) self.Instance.Visible = value == true end
             function obj:Destroy() self.Instance:Destroy() end
@@ -1711,7 +1743,10 @@ local UI = (function()
             obj.Kind = kind
             obj.Flag = flag
             obj._section = section
-            obj.Save = options.Save ~= false and kind ~= "Button" and kind ~= "Label"
+            obj.LegacyFlag = options.LegacyFlag or legacy
+            obj.ThemeRole = kind == "Color" and self.colors[options.ThemeRole] and options.ThemeRole or nil
+            obj.ConfigList = options.ConfigList == true
+            obj.Save = options.Save ~= false and not obj.ConfigList and kind ~= "Button" and kind ~= "Label"
             self.widgets[flag] = obj
             if title and title ~= "" then
                 table.insert(self.features, {name = title, section = section, obj = obj})
@@ -2524,6 +2559,23 @@ local UI = (function()
                 btn:SetAttribute("Selected", selected)
             end
         end
+        function obj:GetConfig()
+            return {key = key, mode = self.Mode}
+        end
+        function obj:SetConfig(value)
+            local nextKey = type(value) == "table" and (value.key or value[1]) or value
+            local mode = type(value) == "table" and (value.mode or value[2]) or self.Mode
+            if mode ~= "Always" and mode ~= "Hold" and mode ~= "Toggle" then
+                return false, "Invalid keybind mode"
+            end
+            if nextKey ~= "None" and not keyOf(nextKey) then return false, "Invalid keybind" end
+            self:Reset()
+            self.Mode = mode
+            if not self:Set(nextKey) then return false, "Invalid keybind" end
+            ui.keybindDirty = true
+            refreshModeSelection()
+            return true
+        end
         for i, entry in ipairs(modeOptions) do
             local btn = ui:_button(modePopup, entry.name)
             btn.Size = UDim2.new(1, 0, 0, MODE_BTN_H)
@@ -2952,7 +3004,11 @@ local UI = (function()
 
         local base = options.Default or Color3.fromRGB(255, 255, 255)
         local h, s, v = base:ToHSV()
-        local alpha = clamp(options.Alpha == nil and 1 or options.Alpha, 0, 1)
+        local initialAlpha = options.Alpha
+        if initialAlpha == nil and options.Transparency ~= nil then
+            initialAlpha = 1 - clamp(options.Transparency, 0, 1)
+        end
+        local alpha = clamp(initialAlpha == nil and 1 or initialAlpha, 0, 1)
         local rainbow, fading = false, false
         local obj = {Instance = row, Swatch = swatch}
         local refresh
@@ -2982,8 +3038,8 @@ local UI = (function()
 
         function obj:Get()
             return {
-                r = math.round(base.R * 255), g = math.round(base.G * 255),
-                b = math.round(base.B * 255), a = alpha,
+                r = base.R * 255, g = base.G * 255,
+                b = base.B * 255, a = alpha,
                 rainbow = rainbow, fading = fading, mode = cachedMode,
             }
         end
@@ -4441,77 +4497,192 @@ local UI = (function()
     end
 
     function UI:_folder()
-        if type(isfolder) == "function" and type(makefolder) == "function" and not isfolder(self.configFolder) then
-            safe(function() makefolder(self.configFolder) end)
+        if type(isfolder) == "function" then
+            if isfolder(self.configFolder) then return end
+            if type(makefolder) == "function" then makefolder(self.configFolder) end
+        elseif type(makefolder) == "function" then
+            pcall(makefolder, self.configFolder)
         end
+    end
+
+    function UI:_refreshConfigLists()
+        local names = self:ListConfigs()
+        for _, widget in pairs(self.widgets) do
+            if widget.ConfigList and type(widget.SetOptions) == "function" then
+                widget:SetOptions(names)
+            end
+        end
+        return names
+    end
+
+    local function validWidgetValue(widget, value)
+        local kind = widget.Kind
+        if kind == "Toggle" then return type(value) == "boolean" end
+        if kind == "Slider" then return finite(value) end
+        if kind == "Range" then
+            return type(value) == "table" and finite(value[1]) and finite(value[2])
+        end
+        if kind == "Input" then return type(value) == "string" end
+        if kind == "Keybind" then
+            local key = type(value) == "table" and (value.key or value[1]) or value
+            local mode = type(value) == "table" and (value.mode or value[2]) or widget.Mode
+            return type(key) == "string" and (key == "None" or keyOf(key) ~= nil)
+                and (mode == "Always" or mode == "Toggle" or mode == "Hold")
+        end
+        if kind == "Color" then
+            if type(value) ~= "table" then return false end
+            local r, g, b = value.r or value[1], value.g or value[2], value.b or value[3]
+            return finite(r) and finite(g) and finite(b)
+                and r >= 0 and r <= 255 and g >= 0 and g <= 255 and b >= 0 and b <= 255
+                and (value.a == nil or (finite(value.a) and value.a >= 0 and value.a <= 1))
+        end
+        if kind == "Dropdown" then
+            return value == nil or type(value) == "string" or type(value) == "number" or type(value) == "table"
+        end
+        if kind == "List" then return value == nil or type(value) == "string" or type(value) == "number" end
+        return true
     end
 
     function UI:SaveConfig(name)
         name = cleanName(name)
-        return safe(function()
-            local data = {version = 2, flags = {}, theme = {}}
-            for role, c in pairs(self.colors) do data.theme[role] = {c.R, c.G, c.B} end
-            for flag, w in pairs(self.widgets) do
-                if w.Save then
-                    local ok, v = pcall(w.Get, w)
-                    if ok then data.flags[flag] = v end
+        return configOperation(function()
+            local data = {version = 3, flags = {}, theme = {}, unset = {}}
+            for role, color in pairs(self.colors) do
+                data.theme[role] = {color.R, color.G, color.B}
+            end
+            for flag, widget in pairs(self.widgets) do
+                if widget.Save then
+                    local getter = widget.GetConfig or widget.Get
+                    if type(getter) ~= "function" then return false, "Missing getter: " .. flag end
+                    local ok, value = pcall(getter, widget)
+                    if not ok then return false, flag .. ": " .. tostring(value) end
+                    if value == nil then data.unset[flag] = true
+                    else data.flags[flag] = value end
                 end
             end
-            if type(writefile) == "function" then
+            local encoded = HttpService:JSONEncode(data)
+            local snapshot = HttpService:JSONDecode(encoded)
+            local memoryOnly = type(writefile) ~= "function"
+            if not memoryOnly then
                 self:_folder()
-                writefile(self.configFolder .. "/" .. name .. ".json", HttpService:JSONEncode(data))
+                writefile(self.configFolder .. "/" .. name .. ".json", encoded)
             end
-            self.configs[name] = data
+            self.memoryConfigs[name] = memoryOnly or nil
+            self.deletedConfigs[name] = nil
+            self.configs[name] = snapshot
+            self:_refreshConfigLists()
             return true
         end)
     end
 
     function UI:LoadConfig(name)
         name = cleanName(name)
-        return safe(function()
+        return configOperation(function()
+            if self._loadingConfig then return false, "Config load already in progress" end
+            if self.deletedConfigs[name] then return false, "Config not found" end
             local data = self.configs[name]
-            if type(readfile) == "function" then
+            local fromDisk = false
+            if type(readfile) == "function" and not self.memoryConfigs[name] then
                 local ok, text = pcall(readfile, self.configFolder .. "/" .. name .. ".json")
                 if ok then
+                    if type(text) ~= "string" or not text:find("%S") then return false, "Config not found" end
                     local decoded, value = pcall(HttpService.JSONDecode, HttpService, text)
                     if not decoded then return false, "Invalid config json" end
                     data = value
+                    fromDisk = true
+                elseif not self.memoryConfigs[name] then
+                    return false, "Config not found: " .. tostring(text)
                 end
             end
             if type(data) ~= "table" or type(data.flags) ~= "table" then return false, "Config not found" end
-            if type(data.theme) == "table" then
-                for role, c in pairs(data.theme) do
-                    if type(c) == "table" then
-                        safe(function()
-                            self:SetThemeColor(role, Color3.new(
-                                clamp(c[1], 0, 1), clamp(c[2], 0, 1), clamp(c[3], 0, 1)
-                            ))
-                        end)
+            local theme = {}
+            local savedTheme = data.theme
+            if savedTheme ~= nil and type(savedTheme) ~= "table" then return false, "Invalid config theme" end
+            if savedTheme == nil and data.accent ~= nil then savedTheme = {accent = data.accent} end
+            for role, color in pairs(savedTheme or {}) do
+                if self.colors[role] then
+                    if type(color) ~= "table" or not finite(color[1]) or not finite(color[2])
+                        or not finite(color[3]) or color[1] < 0 or color[1] > 1
+                        or color[2] < 0 or color[2] > 1 or color[3] < 0 or color[3] > 1 then
+                        return false, "Invalid theme color: " .. tostring(role)
+                    end
+                    theme[role] = Color3.new(color[1], color[2], color[3])
+                end
+            end
+            if data.unset ~= nil and type(data.unset) ~= "table" then return false, "Invalid unset values" end
+            local records = {}
+            for flag, widget in pairs(self.widgets) do
+                if widget.Save then
+                    local value = data.flags[flag]
+                    local present = value ~= nil or (data.unset and data.unset[flag] == true)
+                    if not present and widget.LegacyFlag and widget.LegacyFlag ~= flag then
+                        value = data.flags[widget.LegacyFlag]
+                        present = value ~= nil or (data.unset and data.unset[widget.LegacyFlag] == true)
+                    end
+                    local themeColor = widget.ThemeRole and theme[widget.ThemeRole]
+                    if themeColor then
+                        if not present then value = widget:Get() end
+                        if type(value) ~= "table" then return false, "Invalid value: " .. flag end
+                        local colorData = table.clone(value)
+                        local dynamic = colorData.rainbow or colorData.fading
+                            or (type(colorData.mode) == "string" and colorData.mode ~= "Static")
+                        if not dynamic then
+                            colorData.r, colorData.g, colorData.b = themeColor.R * 255, themeColor.G * 255, themeColor.B * 255
+                        end
+                        value, present = colorData, true
+                    end
+                    if present then
+                        if not validWidgetValue(widget, value) then return false, "Invalid value: " .. flag end
+                        local setter = widget.SetConfig or widget.Set
+                        if type(setter) ~= "function" then return false, "Missing setter: " .. flag end
+                        table.insert(records, {
+                            flag = flag, widget = widget, setter = setter, value = value,
+                            reportsFailure = type(widget.SetConfig) == "function",
+                            priority = widget.Kind == "Keybind" and 1 or (widget.Kind == "Toggle" and 3 or 2),
+                        })
                     end
                 end
-            elseif type(data.accent) == "table" then
-                safe(function()
-                    self:SetAccent(Color3.new(
-                        clamp(data.accent[1], 0, 1), clamp(data.accent[2], 0, 1), clamp(data.accent[3], 0, 1)
-                    ))
-                end)
             end
-            local errors = {}
-            for flag, value in pairs(data.flags) do
-                local w = self.widgets[flag]
-                if w and w.Save and w.Set then
-                    local ok, err = pcall(w.Set, w, value)
-                    if not ok then table.insert(errors, flag .. ": " .. tostring(err)) end
+            table.sort(records, function(a, b)
+                if a.priority ~= b.priority then return a.priority < b.priority end
+                return a.flag < b.flag
+            end)
+            local previousInstant, previousBatch = self._instantUpdate, self._themeBatch
+            self._loadingConfig, self._instantUpdate, self._themeBatch = true, true, true
+            local applied, failure = pcall(function()
+                local errors = {}
+                for _, record in ipairs(records) do
+                    local ok, result, err = pcall(record.setter, record.widget, record.value)
+                    if not ok or (record.reportsFailure and result == false) then
+                        table.insert(errors, record.flag .. ": " .. tostring(ok and err or result))
+                    end
                 end
-            end
-            if #errors > 0 then return false, table.concat(errors, "\n") end
+                for role, color in pairs(theme) do self:SetThemeColor(role, color, true) end
+                for _, repaint in ipairs(self.repaint) do repaint() end
+                self.keybindDirty = true
+                if #errors > 0 then error(table.concat(errors, "\n"), 0) end
+            end)
+            self._loadingConfig = nil
+            self._instantUpdate, self._themeBatch = previousInstant, previousBatch
+            if not applied then return false, tostring(failure) end
+            self.configs[name] = data
+            if fromDisk then self.memoryConfigs[name] = nil end
             return true
         end)
     end
 
     function UI:ListConfigs()
         local found = {}
-        for name in pairs(self.configs) do found[name] = true end
+        for name in pairs(self.configs) do
+            if not self.deletedConfigs[name] then
+                local exists = true
+                if not self.memoryConfigs[name] and type(isfile) == "function" then
+                    local ok, value = pcall(isfile, self.configFolder .. "/" .. name .. ".json")
+                    if ok then exists = value == true end
+                end
+                if exists then found[name] = true end
+            end
+        end
         if type(listfiles) == "function" then
             local ok, files = pcall(function()
                 self:_folder()
@@ -4519,8 +4690,17 @@ local UI = (function()
             end)
             if ok and type(files) == "table" then
                 for _, path in ipairs(files) do
-                    local name = path:gsub("\\", "/"):match("([^/]+)%.json$")
-                    if name and name ~= "auto" then found[name] = true end
+                    if type(path) == "string" then
+                        local name = path:gsub("\\", "/"):match("([^/]+)%.json$")
+                        if name and name ~= "auto" and not self.deletedConfigs[name] then
+                            local visible = true
+                            if type(readfile) == "function" and not self.memoryConfigs[name] then
+                                local read, content = pcall(readfile, self.configFolder .. "/" .. name .. ".json")
+                                visible = read and type(content) == "string" and content:find("%S") ~= nil
+                            end
+                            if visible then found[name] = true else found[name] = nil end
+                        end
+                    end
                 end
             end
         end
@@ -4532,44 +4712,84 @@ local UI = (function()
 
     function UI:DeleteConfig(name)
         name = cleanName(name)
-        return safe(function()
-            if type(delfile) == "function" then
-                local path = self.configFolder .. "/" .. name .. ".json"
-                if type(isfile) ~= "function" or isfile(path) then
-                    local ok, err = pcall(delfile, path)
-                    if not ok then return false, tostring(err) end
+        return configOperation(function()
+            local path = self.configFolder .. "/" .. name .. ".json"
+            local removed, deleteError = false, nil
+            if type(isfile) == "function" then
+                local ok, exists = pcall(isfile, path)
+                if ok and not exists then removed = true end
+            end
+            if not removed and type(delfile) == "function" then
+                local ok, err = pcall(delfile, path)
+                removed, deleteError = ok, err
+                if ok and type(isfile) == "function" then
+                    local checked, exists = pcall(isfile, path)
+                    if checked and exists then removed = false; deleteError = "File still exists" end
+                elseif ok and type(readfile) == "function" then
+                    local read, content = pcall(readfile, path)
+                    if read and content ~= "" then removed = false; deleteError = "File still exists" end
                 end
             end
-            self.configs[name] = nil
+            if not removed and type(writefile) == "function" then
+                local ok, err = pcall(writefile, path, "")
+                removed, deleteError = ok, err
+                if ok and type(readfile) == "function" then
+                    local read, content = pcall(readfile, path)
+                    if not read or content ~= "" then removed = false; deleteError = "Unable to clear config" end
+                end
+            end
+            if not removed and (self.memoryConfigs[name]
+                or (type(readfile) ~= "function" and type(listfiles) ~= "function" and type(writefile) ~= "function")) then
+                removed = true
+            end
+            if not removed then return false, tostring(deleteError or "No config deletion API available") end
+            self.configs[name], self.memoryConfigs[name] = nil, nil
+            self.deletedConfigs[name] = true
+            local autoOk, autoError = true, nil
+            local autoName = self.autoLoad
+            if type(readfile) == "function" and not self.memoryAutoLoad then
+                local read, text = pcall(readfile, self.configFolder .. "/auto.json")
+                if read then
+                    local decoded, data = pcall(HttpService.JSONDecode, HttpService, text)
+                    if decoded and type(data) == "table" then autoName = data.name end
+                end
+            end
+            if type(autoName) == "string" and cleanName(autoName) == name then
+                autoOk, autoError = self:SetAutoLoad(nil)
+            end
+            self:_refreshConfigLists()
+            if not autoOk then return false, "Config deleted; unable to clear auto load: " .. tostring(autoError) end
             return true
         end)
     end
 
     function UI:SetAutoLoad(name)
         local value = name and cleanName(name) or nil
-        return safe(function()
+        return configOperation(function()
             if type(writefile) == "function" then
                 self:_folder()
                 writefile(self.configFolder .. "/auto.json", HttpService:JSONEncode({name = value}))
             end
             self.autoLoad = value
+            self.memoryAutoLoad = type(writefile) ~= "function"
             return true
         end)
     end
 
     function UI:LoadAuto()
-        return safe(function()
+        return configOperation(function()
             local name = self.autoLoad
-            if type(readfile) == "function" then
+            if type(readfile) == "function" and not self.memoryAutoLoad then
                 local ok, text = pcall(readfile, self.configFolder .. "/auto.json")
                 if ok then
                     local decoded, data = pcall(HttpService.JSONDecode, HttpService, text)
-                    if decoded and type(data) == "table" then name = data.name end
+                    if not decoded or type(data) ~= "table" then return false, "Invalid auto load config" end
+                    name = data.name
                 end
             end
-            if type(name) ~= "string" then return false, "Auto load disabled" end
-            self.autoLoad = name
-            return self:LoadConfig(name)
+            if type(name) ~= "string" or name == "" then return false, "Auto load disabled" end
+            self.autoLoad = cleanName(name)
+            return self:LoadConfig(self.autoLoad)
         end)
     end
 
@@ -4609,7 +4829,7 @@ local UI = (function()
     end
 
     UI.Section = Section
-    UI.Version = "2.2.5"
+    UI.Version = "2.2.6"
     UI.Description = "SkidUi interface library"
     return UI
 end)()
