@@ -3047,7 +3047,7 @@ local UI = (function()
             safe(function()
                 base = Color3.fromHSV(h, s, v)
                 local col = base
-                local trans = alpha
+                local trans = 1 - alpha
                 if silent then
                     swatch.BackgroundColor3 = col
                     swatch.BackgroundTransparency = trans
