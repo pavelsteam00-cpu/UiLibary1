@@ -496,7 +496,7 @@ local UI = (function()
             })
             self:_icon(holder, icon, 14)
         end
-        local title = self:_text(header, text, 12, "text")
+        local title = self:_text(header, text, 12, "accent")
         title.Name = "Title"
         title.Position = UDim2.fromOffset(left, 0)
         title.Size = UDim2.new(1, -(left + (counter and 64 or 12)), 0, 32)
@@ -609,7 +609,7 @@ local UI = (function()
         panel.Visible = self.keybindListEnabled
         local title
         title, self.keybindCount = self:_hudTitle(header, "Keybinds", true)
-        
+
         self.keybindBody = create("ScrollingFrame", {
             BackgroundTransparency = 1, BorderSizePixel = 0,
             ClipsDescendants = true, Position = UDim2.fromOffset(0, 36),
@@ -618,7 +618,7 @@ local UI = (function()
         }, panel)
         self:_bind(self.keybindBody, "ScrollBarImageColor3", "accent")
         layout(self.keybindBody, 0)
-        
+
         self.keybindEmpty = self:_frame(self.keybindBody, {
             BackgroundTransparency = 1, BorderSizePixel = 0,
             Size = UDim2.new(1, 0, 0, 24), LayoutOrder = 1,
@@ -633,7 +633,7 @@ local UI = (function()
         self.modPanel.Visible = self.moderatorsEnabled
         local modTitle
         modTitle, self.modCount = self:_hudTitle(modHeader, "Moderators", true)
-        
+
         self.modBody = create("ScrollingFrame", {
             BackgroundTransparency = 1, BorderSizePixel = 0,
             ClipsDescendants = true, Position = UDim2.fromOffset(0, 36),
@@ -904,7 +904,7 @@ local UI = (function()
                     Size = UDim2.new(1, 0, 0, 24),
                     LayoutOrder = i,
                 })
-                local text = self:_text(row, tostring(modName), 11, realCount == 0 and "muted" or "text")
+                local text = self:_text(row, tostring(modName), 11, realCount == 0 and "muted" or "accent")
                 text.Position = UDim2.fromOffset(12, 0)
                 text.Size = UDim2.new(1, -24, 1, 0)
                 text.TextTruncate = Enum.TextTruncate.AtEnd
@@ -1681,13 +1681,13 @@ local UI = (function()
             panel.Visible = true
             panel.GroupTransparency = 1
             panel.Size = UDim2.fromOffset(width, math.max(0, height - 8))
-            
+
             local popupEntry = {
                 panel = panel, anchor = anchor, width = width, height = height,
                 open = true, token = entry + 1, onClose = onClose,
                 connections = {}
             }
-            
+
             local parentScroll = anchor:FindFirstAncestorWhichIsA("ScrollingFrame")
             if parentScroll then
                 table.insert(popupEntry.connections, self:_connect(parentScroll:GetPropertyChangedSignal("CanvasPosition"), function()
@@ -1703,7 +1703,7 @@ local UI = (function()
                     end
                 end))
             end
-            
+
             table.insert(self.popups, popupEntry)
             self:_tween(panel, {GroupTransparency = 0, Size = UDim2.fromOffset(width, height)}, .35, Enum.EasingStyle.Quint)
             local stroke = panel:FindFirstChildOfClass("UIStroke")
@@ -2167,7 +2167,7 @@ local UI = (function()
             SortOrder = Enum.SortOrder.LayoutOrder,
             Padding = UDim.new(0, 8),
         }, attachments)
-        
+
         caption.TextTruncate = Enum.TextTruncate.AtEnd
         attachments:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
             safe(function()
@@ -3036,6 +3036,22 @@ local UI = (function()
             return Color3.fromHSV(hh, s, vv)
         end
 
+        local animate
+        local inUpdates = false
+        local elapsed = 0
+        local function setAnimating(on)
+            if not animate then return end
+            if on and not inUpdates then
+                table.insert(ui.colorUpdates, animate)
+                inUpdates = true
+            elseif not on and inUpdates then
+                local idx = table.find(ui.colorUpdates, animate)
+                if idx then table.remove(ui.colorUpdates, idx) end
+                inUpdates = false
+                elapsed = 0
+            end
+        end
+
         function obj:Get()
             return {
                 r = base.R * 255, g = base.G * 255,
@@ -3058,6 +3074,7 @@ local UI = (function()
                 end
                 if refresh and popup.Visible then refresh() end
                 paintModes()
+                setAnimating(rainbow or fading)
                 if not silent then invoke(options.Callback, col, alpha, cachedMode) end
             end)
         end
@@ -3250,21 +3267,29 @@ local UI = (function()
         end
         ui:_ownedConnect(row, swatch.Activated, function() safe(function() obj:Open() end) end)
 
-        local elapsed = 0
-        local function animate(dt)
-            if not (rainbow or fading) then 
+        local lastR, lastG, lastB = -1, -1, -1
+        local frame = 0
+        animate = function(dt)
+            if not (rainbow or fading) then
                 elapsed = 0
-                return 
+                lastR, lastG, lastB = -1, -1, -1
+                return
             end
             elapsed = elapsed + dt
-            if elapsed < 1 / 30 then return end
-            elapsed = 0
+            if elapsed < 0.05 then return end
+            elapsed = elapsed - 0.05
+            if elapsed > 0.2 then elapsed = 0 end
+            local col = current()
+            local r, g, b = col.R, col.G, col.B
+            if r == lastR and g == lastG and b == lastB then return end
+            lastR, lastG, lastB = r, g, b
             safe(function()
-                local col = current()
-                swatch.BackgroundColor3 = col
-                swatch.BackgroundTransparency = 1 - alpha
-                alphaBar.BackgroundColor3 = col
+                if swatch.Parent then
+                    swatch.BackgroundColor3 = col
+                    swatch.BackgroundTransparency = 1 - alpha
+                end
                 if shown(popup) and not active then
+                    alphaBar.BackgroundColor3 = col
                     local hh = rainbow and (os.clock() * .1) % 1 or h
                     local vv = fading and v * (.6 + .4 * (math.sin(os.clock() * 2) + 1) / 2) or v
                     sat.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromHSV(hh, 1, 1))
@@ -3281,13 +3306,11 @@ local UI = (function()
                 invoke(options.Callback, col, alpha, cachedMode)
             end)
         end
-        table.insert(ui.colorUpdates, animate)
         table.insert(ui.repaint, paintModes)
 
         row.Destroying:Once(function()
-            local index = table.find(ui.colorUpdates, animate)
-            if index then table.remove(ui.colorUpdates, index) end
-            index = table.find(ui.repaint, paintModes)
+            setAnimating(false)
+            local index = table.find(ui.repaint, paintModes)
             if index then table.remove(ui.repaint, index) end
             pcall(function() popup:Destroy() end)
             pcall(function() modes:Destroy() end)
@@ -3305,7 +3328,7 @@ local UI = (function()
         local heading = self.ui:_text(row, options.Text or "Colorpickers")
         heading.Position = UDim2.fromOffset(0, 0)
         heading.Size = UDim2.new(1, -(count * 24 + 4), 1, 0)
-        
+
         local container = self.ui:_frame(row, {
             BackgroundTransparency = 1,
             AnchorPoint = Vector2.new(1, 0.5),
