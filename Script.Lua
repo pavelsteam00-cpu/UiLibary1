@@ -1154,12 +1154,9 @@ local UI = (function()
             IgnoreGuiInset = true, ResetOnSpawn = false,
             DisplayOrder = 1000, ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
         })
-        local ok = pcall(function()
-            self.gui.Parent = type(gethui) == "function" and gethui() or game:GetService("CoreGui")
-        end)
-        if not ok or not self.gui.Parent then
-            self.gui.Parent = player:WaitForChild("PlayerGui")
-        end
+        -- FIX #1: never parent into CoreGui — that is what triggers the
+        -- "Blocked function" spam in CorePackages and breaks the Roblox Esc menu.
+        self.gui.Parent = player:WaitForChild("PlayerGui")
 
         self.root = self:_frame(self.gui, {BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1)})
         self.rootScale = create("UIScale", {Scale = 1}, self.root)
@@ -2945,13 +2942,16 @@ local UI = (function()
 
         local base = options.Default or Color3.fromRGB(255, 255, 255)
         local h, s, v = base:ToHSV()
+        -- FIX #2: alpha now represents OPACITY (1 = fully visible, 0 = fully transparent).
+        -- This matches user's expectation for the "Transparency" slider:
+        -- slider value 1 → swatch fully visible, slider 0 → swatch invisible.
         local alpha
         if options.Transparency ~= nil then
             alpha = clamp(tonumber(options.Transparency), 0, 1)
         elseif options.Alpha ~= nil then
-            alpha = clamp(1 - tonumber(options.Alpha), 0, 1)
+            alpha = clamp(tonumber(options.Alpha), 0, 1)
         else
-            alpha = 0
+            alpha = 1
         end
         local rainbow, fading = false, false
         local obj = {Instance = row, Swatch = swatch}
@@ -2984,9 +2984,12 @@ local UI = (function()
             return {
                 r = math.round(base.R * 255), g = math.round(base.G * 255),
                 b = math.round(base.B * 255), a = alpha,
-                Alpha = 1 - alpha,
-                Transparency = alpha,
-                Visibility = 1 - alpha,
+                Alpha = alpha,
+                -- FIX #3: "Transparency" follows the standard meaning: 0 = opaque/visible.
+                -- The loader reads this field and uses it as `Drawing.Transparency`,
+                -- so 1 - alpha keeps box and swatch visibility in sync with the slider.
+                Transparency = 1 - alpha,
+                Visibility = alpha,
                 rainbow = rainbow, fading = fading, mode = cachedMode,
             }
         end
@@ -2996,11 +2999,12 @@ local UI = (function()
                 base = Color3.fromHSV(h, s, v)
                 cachedMode = computeMode()
                 local col = current()
+                -- FIX #4: invert swatch transparency so slider=1 shows a visible swatch.
                 if silent then
                     swatch.BackgroundColor3 = col
-                    swatch.BackgroundTransparency = alpha
+                    swatch.BackgroundTransparency = 1 - alpha
                 else
-                    ui:_tween(swatch, {BackgroundColor3 = col, BackgroundTransparency = alpha}, .2, Enum.EasingStyle.Sine)
+                    ui:_tween(swatch, {BackgroundColor3 = col, BackgroundTransparency = 1 - alpha}, .2, Enum.EasingStyle.Sine)
                 end
                 if refresh and popup.Visible then refresh() end
                 paintModes()
@@ -3206,7 +3210,8 @@ local UI = (function()
             safe(function()
                 local col = current()
                 swatch.BackgroundColor3 = col
-                swatch.BackgroundTransparency = alpha
+                -- FIX #5: same inversion here so the rainbow/fading swatch stays visible.
+                swatch.BackgroundTransparency = 1 - alpha
                 alphaBar.BackgroundColor3 = col
                 -- skip handle updates while dragging to avoid jitter
                 if shown(popup) and not active then
