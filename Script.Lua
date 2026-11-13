@@ -18,6 +18,30 @@ local UI = (function()
         return ok, err
     end
 
+    -- ====== НАЧАЛО ВСТАВКИ: защита GUI ======
+    local function protectUI(gui)
+        local function blank(...) return ... end
+        local cloneref = cloneref or blank
+
+        if get_hidden_gui or gethui then
+            local hidden = (get_hidden_gui or gethui)()
+            gui.Parent = hidden
+            return gui
+        elseif syn and syn.protect_gui then
+            syn.protect_gui(gui)
+            gui.Parent = game:GetService("CoreGui")
+            return gui
+        else
+            -- fallback, если защита недоступна
+            local ok = pcall(function() gui.Parent = game:GetService("CoreGui") end)
+            if not ok then
+                gui.Parent = player:WaitForChild("PlayerGui")
+            end
+            return gui
+        end
+    end
+    -- ====== КОНЕЦ ВСТАВКИ ======
+
     local defaults = {
         background = Color3.fromRGB(10, 10, 10),
         sidebar    = Color3.fromRGB(14, 14, 14),
@@ -1154,9 +1178,8 @@ local UI = (function()
             IgnoreGuiInset = true, ResetOnSpawn = false,
             DisplayOrder = 1000, ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
         })
-        -- FIX #1: never parent into CoreGui — that is what triggers the
-        -- "Blocked function" spam in CorePackages and breaks the Roblox Esc menu.
-        self.gui.Parent = player:WaitForChild("PlayerGui")
+        -- ===== ИСПОЛЬЗУЕМ protectUI для скрытия от детекции =====
+        protectUI(self.gui)
 
         self.root = self:_frame(self.gui, {BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1)})
         self.rootScale = create("UIScale", {Scale = 1}, self.root)
@@ -2942,16 +2965,14 @@ local UI = (function()
 
         local base = options.Default or Color3.fromRGB(255, 255, 255)
         local h, s, v = base:ToHSV()
-        -- FIX #2: alpha now represents OPACITY (1 = fully visible, 0 = fully transparent).
-        -- This matches user's expectation for the "Transparency" slider:
-        -- slider value 1 → swatch fully visible, slider 0 → swatch invisible.
+        -- ===== ИСПРАВЛЕНИЕ: alpha теперь означает прозрачность (0 = видимо, 1 = невидимо) =====
         local alpha
         if options.Transparency ~= nil then
             alpha = clamp(tonumber(options.Transparency), 0, 1)
         elseif options.Alpha ~= nil then
             alpha = clamp(tonumber(options.Alpha), 0, 1)
         else
-            alpha = 1
+            alpha = 0
         end
         local rainbow, fading = false, false
         local obj = {Instance = row, Swatch = swatch}
@@ -2983,13 +3004,10 @@ local UI = (function()
         function obj:Get()
             return {
                 r = math.round(base.R * 255), g = math.round(base.G * 255),
-                b = math.round(base.B * 255), a = alpha,
-                Alpha = alpha,
-                -- FIX #3: "Transparency" follows the standard meaning: 0 = opaque/visible.
-                -- The loader reads this field and uses it as `Drawing.Transparency`,
-                -- so 1 - alpha keeps box and swatch visibility in sync with the slider.
-                Transparency = 1 - alpha,
-                Visibility = alpha,
+                b = math.round(base.B * 255), a = 1 - alpha,
+                Alpha = 1 - alpha,
+                Transparency = alpha,
+                Visibility = 1 - alpha,
                 rainbow = rainbow, fading = fading, mode = cachedMode,
             }
         end
@@ -2999,12 +3017,12 @@ local UI = (function()
                 base = Color3.fromHSV(h, s, v)
                 cachedMode = computeMode()
                 local col = current()
-                -- FIX #4: invert swatch transparency so slider=1 shows a visible swatch.
+                -- ===== ИСПРАВЛЕНИЕ: прозрачность = alpha (0 = видимо, 1 = невидимо) =====
                 if silent then
                     swatch.BackgroundColor3 = col
-                    swatch.BackgroundTransparency = 1 - alpha
+                    swatch.BackgroundTransparency = alpha
                 else
-                    ui:_tween(swatch, {BackgroundColor3 = col, BackgroundTransparency = 1 - alpha}, .2, Enum.EasingStyle.Sine)
+                    ui:_tween(swatch, {BackgroundColor3 = col, BackgroundTransparency = alpha}, .2, Enum.EasingStyle.Sine)
                 end
                 if refresh and popup.Visible then refresh() end
                 paintModes()
@@ -3138,7 +3156,7 @@ local UI = (function()
                 ui:_tween(alphaBar, {BackgroundColor3 = current()}, .2, Enum.EasingStyle.Sine)
                 if not rgb:IsFocused() then
                     local c = obj:Get()
-                    rgb.Text = string.format("%d, %d, %d, %.2f", c.r, c.g, c.b, alpha)
+                    rgb.Text = string.format("%d, %d, %d, %.2f", c.r, c.g, c.b, c.a)
                 end
                 modeButton.Text = cachedMode:gsub(",", ", ")
             end)
@@ -3183,7 +3201,7 @@ local UI = (function()
             safe(function()
                 local r, g, b, a = rgb.Text:match("^%s*([%d%.]+)%s*,%s*([%d%.]+)%s*,%s*([%d%.]+)%s*,?%s*([%d%.]*)%s*$")
                 if tonumber(r) and tonumber(g) and tonumber(b) then
-                    obj:Set({r = r, g = g, b = b, a = tonumber(a) or alpha, rainbow = rainbow, fading = fading})
+                    obj:Set({r = r, g = g, b = b, a = tonumber(a) or (1 - alpha), rainbow = rainbow, fading = fading})
                 end
                 refresh()
             end)
@@ -3210,8 +3228,8 @@ local UI = (function()
             safe(function()
                 local col = current()
                 swatch.BackgroundColor3 = col
-                -- FIX #5: same inversion here so the rainbow/fading swatch stays visible.
-                swatch.BackgroundTransparency = 1 - alpha
+                -- ===== ИСПРАВЛЕНИЕ: прозрачность = alpha =====
+                swatch.BackgroundTransparency = alpha
                 alphaBar.BackgroundColor3 = col
                 -- skip handle updates while dragging to avoid jitter
                 if shown(popup) and not active then
