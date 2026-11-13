@@ -1,3 +1,5 @@
+-- UI SOURCE
+
 local UI = (function()
     local Players       = game:GetService("Players")
     local Teams         = game:GetService("Teams")
@@ -17,30 +19,6 @@ local UI = (function()
         local ok, err = pcall(fn, ...)
         return ok, err
     end
-
-    -- ====== НАЧАЛО ВСТАВКИ: защита GUI ======
-    local function protectUI(gui)
-        local function blank(...) return ... end
-        local cloneref = cloneref or blank
-
-        if get_hidden_gui or gethui then
-            local hidden = (get_hidden_gui or gethui)()
-            gui.Parent = hidden
-            return gui
-        elseif syn and syn.protect_gui then
-            syn.protect_gui(gui)
-            gui.Parent = game:GetService("CoreGui")
-            return gui
-        else
-            -- fallback, если защита недоступна
-            local ok = pcall(function() gui.Parent = game:GetService("CoreGui") end)
-            if not ok then
-                gui.Parent = player:WaitForChild("PlayerGui")
-            end
-            return gui
-        end
-    end
-    -- ====== КОНЕЦ ВСТАВКИ ======
 
     local defaults = {
         background = Color3.fromRGB(10, 10, 10),
@@ -1045,19 +1023,17 @@ local UI = (function()
             self.modPanel.Size = UDim2.fromOffset(240, modHeight)
             self.modBody.Size = UDim2.new(1, 0, 0, moderatorListHeight)
 
-            -- keep top edges fixed so lists only grow downward
             self.keybindPanel.AnchorPoint = Vector2.new(0, 0)
             self.modPanel.AnchorPoint = Vector2.new(1, 0)
             self.targetHUD.AnchorPoint = Vector2.new(1, 0)
 
             if not self._hudInitPos then
                 self._hudInitPos = true
-                -- same vertical level, screen middle; grow only downward
+
                 self.keybindPanel.Position = UDim2.new(0, 12, 0.5, 0)
                 self.modPanel.Position = UDim2.new(1, -12, 0.5, 0)
             end
 
-            -- Target HUD flush under Moderators; follows list growth downward
             if not (self.targetDragEntry and self.targetDragEntry.userMoved) then
                 local gap = 8
                 self.targetHUD.Position = UDim2.new(1, -12, 0.5, modHeight + gap)
@@ -1178,8 +1154,12 @@ local UI = (function()
             IgnoreGuiInset = true, ResetOnSpawn = false,
             DisplayOrder = 1000, ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
         })
-        -- ===== ИСПОЛЬЗУЕМ protectUI для скрытия от детекции =====
-        protectUI(self.gui)
+        local ok = pcall(function()
+            self.gui.Parent = type(gethui) == "function" and gethui() or game:GetService("CoreGui")
+        end)
+        if not ok or not self.gui.Parent then
+            self.gui.Parent = player:WaitForChild("PlayerGui")
+        end
 
         self.root = self:_frame(self.gui, {BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1)})
         self.rootScale = create("UIScale", {Scale = 1}, self.root)
@@ -2209,9 +2189,6 @@ local UI = (function()
         local ui = section.ui
         local minimum, maximum = options.Min or 0, options.Max or 100
         if maximum <= minimum then return end
-        if options.Step == nil and tonumber(options.Rounding) then
-            options.Step = 10 ^ -math.max(0, tonumber(options.Rounding))
-        end
         local step = math.max(tonumber(options.Step) or 1, 1e-6)
         local compact = options.Compact == true
         local row = section:_row(compact and 40 or 48)
@@ -2708,39 +2685,35 @@ local UI = (function()
                         choice.TextColor3 = disabledChoice and ui.colors.outline
                             or (choice:GetAttribute("Selected") and ui.colors.text or ui.colors.muted)
                         choice.BackgroundTransparency = selected and 0 or 1
+                        choice.TextTransparency = .6
                         choice.Active = not disabledChoice
-                        local function cancelTweens()
-                            local bag = ui.tweens and ui.tweens[choice]
-                            if bag then
-                                for _, tw in pairs(bag) do
-                                    pcall(function() tw:Cancel() end)
-                                end
-                                ui.tweens[choice] = {}
-                            end
-                        end
-                        local function paintChoice(hovered)
-                            cancelTweens()
+                        ui:_tween(choice, {TextTransparency = 0}, .25)
+                        local function paintChoice()
                             local selected = choice:GetAttribute("Selected") == true
-                            local disabled = choice:GetAttribute("DisabledChoice") == true
-                            choice.BackgroundColor3 = ui.colors.hover
                             if selected then
-                                choice.TextColor3 = ui.colors.text
+                                choice.BackgroundColor3 = ui.colors.hover
                                 choice.BackgroundTransparency = 0
-                            elseif hovered and not disabled then
                                 choice.TextColor3 = ui.colors.text
-                                choice.BackgroundTransparency = 0.9
                             else
-                                choice.TextColor3 = disabled and ui.colors.outline or ui.colors.muted
                                 choice.BackgroundTransparency = 1
+                                choice.TextColor3 = choice:GetAttribute("DisabledChoice") and ui.colors.outline or ui.colors.muted
                             end
-                            choice.TextTransparency = 0
                         end
-                        paintChoice(false)
                         choice.MouseEnter:Connect(function()
-                            safe(function() paintChoice(true) end)
+                            safe(function()
+                                if choice:GetAttribute("Selected") == true then
+                                    paintChoice()
+                                elseif not choice:GetAttribute("DisabledChoice") then
+                                    ui:_tween(choice, {
+                                        TextColor3 = ui.colors.text,
+                                        BackgroundTransparency = 0.9,
+                                        BackgroundColor3 = ui.colors.hover,
+                                    }, .2)
+                                end
+                            end)
                         end)
                         choice.MouseLeave:Connect(function()
-                            safe(function() paintChoice(false) end)
+                            safe(function() paintChoice() end)
                         end)
                         choice.Activated:Connect(function()
                             safe(function()
@@ -2827,18 +2800,19 @@ local UI = (function()
                 for _, b in ipairs(scroll:GetChildren()) do
                     if b:IsA("TextButton") then
                         local selected = choices[b:GetAttribute("ChoiceIndex")] == value
-                        b:SetAttribute("Selected", selected == true)
-                        local bag = ui.tweens and ui.tweens[b]
-                        if bag then
-                            for _, tw in pairs(bag) do
-                                pcall(function() tw:Cancel() end)
-                            end
-                            ui.tweens[b] = {}
+                        b:SetAttribute("Selected", selected)
+                        local props = {
+                            TextColor3 = selected and ui.colors.text or ui.colors.muted,
+                            BackgroundTransparency = selected and 0 or 1,
+                            BackgroundColor3 = ui.colors.hover,
+                        }
+                        if silent then
+                            b.TextColor3 = props.TextColor3
+                            b.BackgroundTransparency = props.BackgroundTransparency
+                            b.BackgroundColor3 = props.BackgroundColor3
+                        else
+                            ui:_tween(b, props, .3)
                         end
-                        b.BackgroundColor3 = ui.colors.hover
-                        b.TextColor3 = selected and ui.colors.text or ui.colors.muted
-                        b.BackgroundTransparency = selected and 0 or 1
-                        b.TextTransparency = 0
                     end
                 end
                 if not silent then invoke(options.Callback, value) end
@@ -2878,38 +2852,37 @@ local UI = (function()
                             b.BackgroundTransparency = 1
                         end
                         b:SetAttribute("ChoiceIndex", i)
-                        local function cancelTweens()
-                            local bag = ui.tweens and ui.tweens[b]
-                            if bag then
-                                for _, tw in pairs(bag) do
-                                    pcall(function() tw:Cancel() end)
-                                end
-                                ui.tweens[b] = {}
-                            end
-                        end
-                        local function paintChoice(hovered)
-                            cancelTweens()
+                        b.TextTransparency = .5
+                        ui:_tween(b, {TextTransparency = 0}, .25)
+                        local function paintChoice()
                             local selected = b:GetAttribute("Selected") == true
-                            b.BackgroundColor3 = ui.colors.hover
                             if selected then
-                                b.TextColor3 = ui.colors.text
+                                b.BackgroundColor3 = ui.colors.hover
                                 b.BackgroundTransparency = 0
-                            elseif hovered then
                                 b.TextColor3 = ui.colors.text
-                                b.BackgroundTransparency = 0.9
                             else
-                                b.TextColor3 = ui.colors.muted
                                 b.BackgroundTransparency = 1
+                                b.TextColor3 = ui.colors.muted
                             end
-                            b.TextTransparency = 0
                         end
-                        paintChoice(false)
                         b.Activated:Connect(function() safe(function() obj:Set(v) end) end)
                         b.MouseEnter:Connect(function()
-                            safe(function() paintChoice(true) end)
+                            safe(function()
+                                if b:GetAttribute("Selected") == true then
+                                    paintChoice()
+                                else
+                                    ui:_tween(b, {
+                                        TextColor3 = ui.colors.text,
+                                        BackgroundTransparency = 0.9,
+                                        BackgroundColor3 = ui.colors.hover,
+                                    }, .2)
+                                end
+                            end)
                         end)
                         b.MouseLeave:Connect(function()
-                            safe(function() paintChoice(false) end)
+                            safe(function()
+                                paintChoice()
+                            end)
                         end)
                     end
                 end
@@ -2922,18 +2895,11 @@ local UI = (function()
             safe(function()
                 for _, b in ipairs(scroll:GetChildren()) do
                     if b:IsA("TextButton") then
-                        local selected = b:GetAttribute("Selected") == true
-                        local bag = ui.tweens and ui.tweens[b]
-                        if bag then
-                            for _, tw in pairs(bag) do
-                                pcall(function() tw:Cancel() end)
-                            end
-                            ui.tweens[b] = {}
-                        end
-                        b.TextColor3 = selected and ui.colors.text or ui.colors.muted
-                        b.BackgroundTransparency = selected and 0 or 1
-                        b.BackgroundColor3 = ui.colors.hover
-                        b.TextTransparency = 0
+                        local selected = b:GetAttribute("Selected")
+                        ui:_tween(b, {
+                            TextColor3 = selected and ui.colors.text or ui.colors.muted,
+                            BackgroundTransparency = selected and 0 or 1
+                        }, .3)
                     end
                 end
             end)
@@ -2965,15 +2931,7 @@ local UI = (function()
 
         local base = options.Default or Color3.fromRGB(255, 255, 255)
         local h, s, v = base:ToHSV()
-        -- ===== ИСПРАВЛЕНИЕ: alpha теперь означает прозрачность (0 = видимо, 1 = невидимо) =====
-        local alpha
-        if options.Transparency ~= nil then
-            alpha = clamp(tonumber(options.Transparency), 0, 1)
-        elseif options.Alpha ~= nil then
-            alpha = clamp(tonumber(options.Alpha), 0, 1)
-        else
-            alpha = 0
-        end
+        local alpha = clamp(options.Alpha == nil and 1 or options.Alpha, 0, 1)
         local rainbow, fading = false, false
         local obj = {Instance = row, Swatch = swatch}
         local refresh
@@ -3004,10 +2962,7 @@ local UI = (function()
         function obj:Get()
             return {
                 r = math.round(base.R * 255), g = math.round(base.G * 255),
-                b = math.round(base.B * 255), a = 1 - alpha,
-                Alpha = 1 - alpha,
-                Transparency = alpha,
-                Visibility = 1 - alpha,
+                b = math.round(base.B * 255), a = alpha,
                 rainbow = rainbow, fading = fading, mode = cachedMode,
             }
         end
@@ -3017,12 +2972,12 @@ local UI = (function()
                 base = Color3.fromHSV(h, s, v)
                 cachedMode = computeMode()
                 local col = current()
-                -- ===== ИСПРАВЛЕНИЕ: прозрачность = alpha (0 = видимо, 1 = невидимо) =====
+                local trans = 1 - alpha
                 if silent then
                     swatch.BackgroundColor3 = col
-                    swatch.BackgroundTransparency = alpha
+                    swatch.BackgroundTransparency = trans
                 else
-                    ui:_tween(swatch, {BackgroundColor3 = col, BackgroundTransparency = alpha}, .2, Enum.EasingStyle.Sine)
+                    ui:_tween(swatch, {BackgroundColor3 = col, BackgroundTransparency = trans}, .2, Enum.EasingStyle.Sine)
                 end
                 if refresh and popup.Visible then refresh() end
                 paintModes()
@@ -3052,7 +3007,6 @@ local UI = (function()
             end)
         end
 
-        -- SV square + vertical hue bar beside it (thickness 15 unchanged)
         local square = ui:_frame(popup, {
             BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0,
             Position = UDim2.fromOffset(10, 10),
@@ -3103,14 +3057,14 @@ local UI = (function()
         })
         round(alphaBar, 4)
         create("UIGradient", {
-            Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.new(.03, .03, .03)),
+            Color = ColorSequence.new(Color3.new(.03, .03, .03), Color3.new(1, 1, 1)),
         }, alphaBar)
         local am = ui:_frame(alphaBar, {
             BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.1,
             BorderSizePixel = 0, Size = UDim2.fromOffset(14, 14),
             AnchorPoint = Vector2.new(.5, .5), ZIndex = 5, Active = false,
         })
-        am.Position = UDim2.fromScale(0, 0.5)
+        am.Position = UDim2.fromScale(1, 0.5)
         pill(am)
         ui:_stroke(am, "ink", 0).Thickness = 1.5
 
@@ -3156,7 +3110,7 @@ local UI = (function()
                 ui:_tween(alphaBar, {BackgroundColor3 = current()}, .2, Enum.EasingStyle.Sine)
                 if not rgb:IsFocused() then
                     local c = obj:Get()
-                    rgb.Text = string.format("%d, %d, %d, %.2f", c.r, c.g, c.b, c.a)
+                    rgb.Text = string.format("%d, %d, %d, %.2f", c.r, c.g, c.b, alpha)
                 end
                 modeButton.Text = cachedMode:gsub(",", ", ")
             end)
@@ -3201,7 +3155,7 @@ local UI = (function()
             safe(function()
                 local r, g, b, a = rgb.Text:match("^%s*([%d%.]+)%s*,%s*([%d%.]+)%s*,%s*([%d%.]+)%s*,?%s*([%d%.]*)%s*$")
                 if tonumber(r) and tonumber(g) and tonumber(b) then
-                    obj:Set({r = r, g = g, b = b, a = tonumber(a) or (1 - alpha), rainbow = rainbow, fading = fading})
+                    obj:Set({r = r, g = g, b = b, a = tonumber(a) or alpha, rainbow = rainbow, fading = fading})
                 end
                 refresh()
             end)
@@ -3228,10 +3182,8 @@ local UI = (function()
             safe(function()
                 local col = current()
                 swatch.BackgroundColor3 = col
-                -- ===== ИСПРАВЛЕНИЕ: прозрачность = alpha =====
-                swatch.BackgroundTransparency = alpha
+                swatch.BackgroundTransparency = 1 - alpha
                 alphaBar.BackgroundColor3 = col
-                -- skip handle updates while dragging to avoid jitter
                 if shown(popup) and not active then
                     local hh = rainbow and (os.clock() * .1) % 1 or h
                     local vv = fading and v * (.6 + .4 * (math.sin(os.clock() * 2) + 1) / 2) or v
@@ -4633,7 +4585,7 @@ local UI = (function()
     end
 
     UI.Section = Section
-    UI.Version = "2.2.7"
+    UI.Version = "2.2.4"
     UI.Description = "SkidUi interface library"
     return UI
 end)()
