@@ -2946,12 +2946,12 @@ local UI = (function()
         local base = options.Default or Color3.fromRGB(255, 255, 255)
         local h, s, v = base:ToHSV()
         local alpha
-        if options.Alpha ~= nil then
-            alpha = clamp(options.Alpha, 0, 1)
-        elseif options.Transparency ~= nil then
-            alpha = clamp(1 - tonumber(options.Transparency), 0, 1)
+        if options.Transparency ~= nil then
+            alpha = clamp(tonumber(options.Transparency), 0, 1)
+        elseif options.Alpha ~= nil then
+            alpha = clamp(1 - tonumber(options.Alpha), 0, 1)
         else
-            alpha = 1
+            alpha = 0
         end
         local rainbow, fading = false, false
         local obj = {Instance = row, Swatch = swatch}
@@ -2984,9 +2984,9 @@ local UI = (function()
             return {
                 r = math.round(base.R * 255), g = math.round(base.G * 255),
                 b = math.round(base.B * 255), a = alpha,
-                Alpha = alpha,
-                Transparency = 1 - alpha,
-                Visibility = alpha,
+                Alpha = 1 - alpha,
+                Transparency = alpha,
+                Visibility = 1 - alpha,
                 rainbow = rainbow, fading = fading, mode = cachedMode,
             }
         end
@@ -2996,12 +2996,11 @@ local UI = (function()
                 base = Color3.fromHSV(h, s, v)
                 cachedMode = computeMode()
                 local col = current()
-                local trans = 1 - alpha
                 if silent then
                     swatch.BackgroundColor3 = col
-                    swatch.BackgroundTransparency = trans
+                    swatch.BackgroundTransparency = alpha
                 else
-                    ui:_tween(swatch, {BackgroundColor3 = col, BackgroundTransparency = trans}, .2, Enum.EasingStyle.Sine)
+                    ui:_tween(swatch, {BackgroundColor3 = col, BackgroundTransparency = alpha}, .2, Enum.EasingStyle.Sine)
                 end
                 if refresh and popup.Visible then refresh() end
                 paintModes()
@@ -3082,14 +3081,14 @@ local UI = (function()
         })
         round(alphaBar, 4)
         create("UIGradient", {
-            Color = ColorSequence.new(Color3.new(.03, .03, .03), Color3.new(1, 1, 1)),
+            Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.new(.03, .03, .03)),
         }, alphaBar)
         local am = ui:_frame(alphaBar, {
             BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.1,
             BorderSizePixel = 0, Size = UDim2.fromOffset(14, 14),
             AnchorPoint = Vector2.new(.5, .5), ZIndex = 5, Active = false,
         })
-        am.Position = UDim2.fromScale(1, 0.5)
+        am.Position = UDim2.fromScale(0, 0.5)
         pill(am)
         ui:_stroke(am, "ink", 0).Thickness = 1.5
 
@@ -3207,7 +3206,7 @@ local UI = (function()
             safe(function()
                 local col = current()
                 swatch.BackgroundColor3 = col
-                swatch.BackgroundTransparency = 1 - alpha
+                swatch.BackgroundTransparency = alpha
                 alphaBar.BackgroundColor3 = col
                 -- skip handle updates while dragging to avoid jitter
                 if shown(popup) and not active then
