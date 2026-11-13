@@ -190,23 +190,30 @@ local UI = (function()
         return nil
     end
 
-    function UI:_tween(x, props, duration, style)
+    function UI:_tween(x, props, duration, style, instant)
         if self.destroyed or not x or not x.Parent then return end
         safe(function()
             local active = self.tweens[x]
             if not active then active = {}; self.tweens[x] = active end
             for property, value in pairs(props) do
-                if active[property] then pcall(function() active[property]:Cancel() end) end
-                local t = TweenService:Create(
-                    x,
-                    TweenInfo.new(duration or .45, style or self.easing, Enum.EasingDirection.Out),
-                    {[property] = value}
-                )
-                active[property] = t
-                t.Completed:Once(function()
-                    if active[property] == t then active[property] = nil end
-                end)
-                t:Play()
+                if active[property] then
+                    pcall(function() active[property]:Cancel() end)
+                    active[property] = nil
+                end
+                if instant then
+                    x[property] = value
+                else
+                    local t = TweenService:Create(
+                        x,
+                        TweenInfo.new(duration or .45, style or self.easing, Enum.EasingDirection.Out),
+                        {[property] = value}
+                    )
+                    active[property] = t
+                    t.Completed:Once(function()
+                        if active[property] == t then active[property] = nil end
+                    end)
+                    t:Play()
+                end
             end
         end)
     end
@@ -1449,9 +1456,13 @@ local UI = (function()
         return true
     end
 
-    function UI:SetThemeColor(role, color)
+    function UI:SetThemeColor(role, color, instant)
         if not self.colors[role] or typeof(color) ~= "Color3" then return end
         safe(function()
+            local now = os.clock()
+            local rapid = instant or (self._themeChangeTime ~= nil and (now - self._themeChangeTime) < 0.12)
+            self._themeChangeTime = now
+
             self.colors[role] = color
             if role == "accent" then self.accent = color end
             for i = #self.bindings, 1, -1 do
@@ -1459,10 +1470,20 @@ local UI = (function()
                 if not b.x or not b.x.Parent then
                     table.remove(self.bindings, i)
                 elseif b.role == role then
-                    self:_tween(b.x, {[b.property] = b.transform and b.transform(color) or color}, .3)
+                    local value = color
+                    if b.transform then
+                        local ok, transformed = pcall(b.transform, color)
+                        if ok then value = transformed end
+                    end
+                    self:_tween(b.x, {[b.property] = value}, .3, nil, rapid)
                 end
             end
-            for _, f in ipairs(self.repaint) do safe(f) end
+
+            local fireRepaint = not rapid or not self._lastRepaintCall or (now - self._lastRepaintCall) >= 0.2
+            if fireRepaint then
+                self._lastRepaintCall = now
+                for _, f in ipairs(self.repaint) do safe(f) end
+            end
 
             if self._targetStatusRole == role and self.targetStatus then
                 self.targetStatus.TextColor3 = color
@@ -3175,7 +3196,10 @@ local UI = (function()
 
         local elapsed = 0
         local function animate(dt)
-            if not (rainbow or fading) then return end
+            if not (rainbow or fading) then 
+                elapsed = 0
+                return 
+            end
             elapsed = elapsed + dt
             if elapsed < 1 / 30 then return end
             elapsed = 0
@@ -4585,7 +4609,7 @@ local UI = (function()
     end
 
     UI.Section = Section
-    UI.Version = "2.2.4"
+    UI.Version = "2.2.5"
     UI.Description = "SkidUi interface library"
     return UI
 end)()
