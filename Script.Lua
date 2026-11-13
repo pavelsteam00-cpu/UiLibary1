@@ -1021,16 +1021,19 @@ local UI = (function()
             self.modPanel.Size = UDim2.fromOffset(240, modHeight)
             self.modBody.Size = UDim2.new(1, 0, 0, moderatorListHeight)
 
+            -- keep top edges fixed so lists only grow downward
             self.keybindPanel.AnchorPoint = Vector2.new(0, 0)
             self.modPanel.AnchorPoint = Vector2.new(1, 0)
             self.targetHUD.AnchorPoint = Vector2.new(1, 0)
 
             if not self._hudInitPos then
                 self._hudInitPos = true
+                -- same vertical level, screen middle; grow only downward
                 self.keybindPanel.Position = UDim2.new(0, 12, 0.5, 0)
                 self.modPanel.Position = UDim2.new(1, -12, 0.5, 0)
             end
 
+            -- Target HUD flush under Moderators; follows list growth downward
             if not (self.targetDragEntry and self.targetDragEntry.userMoved) then
                 local gap = 8
                 self.targetHUD.Position = UDim2.new(1, -12, 0.5, modHeight + gap)
@@ -3018,6 +3021,7 @@ local UI = (function()
             end)
         end
 
+        -- SV square + vertical hue bar beside it (thickness 15 unchanged)
         local square = ui:_frame(popup, {
             BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0,
             Position = UDim2.fromOffset(10, 10),
@@ -3195,6 +3199,7 @@ local UI = (function()
                 swatch.BackgroundColor3 = col
                 swatch.BackgroundTransparency = 1 - alpha
                 alphaBar.BackgroundColor3 = col
+                -- skip handle updates while dragging to avoid jitter
                 if shown(popup) and not active then
                     local hh = rainbow and (os.clock() * .1) % 1 or h
                     local vv = fading and v * (.6 + .4 * (math.sin(os.clock() * 2) + 1) / 2) or v
@@ -3475,7 +3480,7 @@ local UI = (function()
             if kind == "Color" and control.Get then
                 local colorData = control:Get()
                 local alpha = type(colorData) == "table" and colorData.a or 1
-                control.Transparency = alpha
+                control.Transparency = options._usesTransparency and (1 - alpha) or alpha
             end
             control._changedCallbacks = control._changedCallbacks or {}
             control._clickCallbacks = control._clickCallbacks or {}
@@ -3552,7 +3557,7 @@ local UI = (function()
                         value = {args[1], args[2]}
                     elseif kind == "Color" then
                         value = args[1]
-                        control.Transparency = args[2]
+                        control.Transparency = options._usesTransparency and (1 - (args[2] or 1)) or args[2]
                         control.Mode = args[3]
                     elseif kind == "Dropdown" and options.Multi then
                         value = self:_publicValue(control, kind, args[1], options)
@@ -3570,7 +3575,7 @@ local UI = (function()
                     end
                     if not finishedSuppressed then
                         if kind == "Color" and options._usesTransparency then
-                            invoke(originalCallback, args[1], args[2] or 1)
+                            invoke(originalCallback, args[1], 1 - (args[2] or 1))
                         else
                             invoke(originalCallback, table.unpack(args, 1, args.n))
                         end
@@ -3875,7 +3880,7 @@ local UI = (function()
         elseif methodName == "Colorpicker" then
             options.Text = options.Text or options.Title or index
             if options.Transparency ~= nil then
-                options.Alpha = clamp(options.Transparency, 0, 1)
+                options.Alpha = 1 - clamp(options.Transparency, 0, 1)
                 options._usesTransparency = true
             end
         elseif methodName == "Input" then
