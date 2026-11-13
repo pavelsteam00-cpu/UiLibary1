@@ -486,7 +486,7 @@ local UI = (function()
         return panel, header
     end
 
-    function UI:_hudTitle(header, text, counter, icon)
+    function UI:_hudTitle(header, text, counter, icon, iconRole)
         local left = icon and 36 or 12
         if icon then
             local holder = self:_frame(header, {
@@ -494,7 +494,25 @@ local UI = (function()
                 Position = UDim2.fromOffset(12, 9),
                 Size = UDim2.fromOffset(14, 14), ZIndex = 3,
             })
-            self:_icon(holder, icon, 14)
+            local iconRoot = self:_icon(holder, icon, 14)
+            if iconRole then
+                local sprite = iconRoot:FindFirstChild("IconImage")
+                if sprite then
+                    local function paint()
+                        safe(function()
+                            if sprite.Parent then
+                                sprite.ImageColor3 = self.colors[iconRole] or WHITE
+                            end
+                        end)
+                    end
+                    paint()
+                    table.insert(self.repaint, paint)
+                    iconRoot.Destroying:Once(function()
+                        local i = table.find(self.repaint, paint)
+                        if i then table.remove(self.repaint, i) end
+                    end)
+                end
+            end
         end
         local title = self:_text(header, text, 12, "accent")
         title.Name = "Title"
@@ -565,7 +583,7 @@ local UI = (function()
         self.targetHUD.Visible = self.targetHUDEnabled
         self.targetHUDHeight = targetHUDHeight
 
-        self:_hudTitle(tHeader, "Target HUD", false, "person")
+        self:_hudTitle(tHeader, "Target HUD", false, "person", "accent")
 
         self.targetAvatar = create("ImageLabel", {
             BackgroundColor3 = Color3.fromRGB(20, 20, 20),
@@ -4730,7 +4748,7 @@ local UI = (function()
     end
 
     UI.Section = Section
-    UI.Version = "2.3.0"
+    UI.Version = "2.4.0"
     UI.Description = "SkidUi interface library"
     return UI
 end)()
