@@ -3128,14 +3128,14 @@ local UI = (function()
         })
         round(alphaBar, 4)
         create("UIGradient", {
-            Color = ColorSequence.new(Color3.new(.03, .03, .03), Color3.new(1, 1, 1)),
+            Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.new(.03, .03, .03)),
         }, alphaBar)
         local am = ui:_frame(alphaBar, {
             BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.1,
             BorderSizePixel = 0, Size = UDim2.fromOffset(14, 14),
             AnchorPoint = Vector2.new(.5, .5), ZIndex = 5, Active = false,
         })
-        am.Position = UDim2.fromScale(1, 0.5)
+        am.Position = UDim2.fromScale(0, 0.5)
         pill(am)
         ui:_stroke(am, "ink", 0).Thickness = 1.5
 
@@ -3149,11 +3149,11 @@ local UI = (function()
                 sat.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromHSV(h, 1, 1))
                 ui:_tween(marker, {Position = UDim2.fromScale(s, 1 - v)}, .15, Enum.EasingStyle.Sine)
                 ui:_tween(hueMarker, {Position = UDim2.fromScale(0.5, h)}, .15, Enum.EasingStyle.Sine)
-                ui:_tween(am, {Position = UDim2.fromScale(alpha, 0.5)}, .15, Enum.EasingStyle.Sine)
+                ui:_tween(am, {Position = UDim2.fromScale(1 - alpha, 0.5)}, .15, Enum.EasingStyle.Sine)
                 ui:_tween(alphaBar, {BackgroundColor3 = col}, .2, Enum.EasingStyle.Sine)
                 if not rgb:IsFocused() then
                     local c = obj:Get()
-                    rgb.Text = string.format("%d, %d, %d, %.2f", c.r, c.g, c.b, alpha)
+                    rgb.Text = string.format("%d, %d, %d, %.2f", c.r, c.g, c.b, 1 - alpha)
                 end
             end)
         end
@@ -3167,7 +3167,8 @@ local UI = (function()
                 elseif active == "hue" then
                     h = math.clamp((input.Position.Y - hue.AbsolutePosition.Y) / hue.AbsoluteSize.Y, 0, 1)
                 elseif active == "alpha" then
-                    alpha = math.clamp((input.Position.X - alphaBar.AbsolutePosition.X) / alphaBar.AbsoluteSize.X, 0, 1)
+                    local t = math.clamp((input.Position.X - alphaBar.AbsolutePosition.X) / alphaBar.AbsoluteSize.X, 0, 1)
+                    alpha = 1 - t
                 end
                 changed(false)
             end)
@@ -3196,7 +3197,9 @@ local UI = (function()
             safe(function()
                 local r, g, b, a = rgb.Text:match("^%s*([%d%.]+)%s*,%s*([%d%.]+)%s*,%s*([%d%.]+)%s*,?%s*([%d%.]*)%s*$")
                 if tonumber(r) and tonumber(g) and tonumber(b) then
-                    obj:Set({r = r, g = g, b = b, a = tonumber(a) or alpha})
+                    local t = tonumber(a)
+                    local nextAlpha = t ~= nil and (1 - clamp(t, 0, 1)) or alpha
+                    obj:Set({r = r, g = g, b = b, a = nextAlpha})
                 end
                 refresh()
             end)
