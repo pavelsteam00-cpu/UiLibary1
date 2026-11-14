@@ -1,21 +1,16 @@
 local UI = (function()
-    local Players       = game["P" .. "layers"]
-    local Teams         = game["Te" .. "ams"]
-    local Input         = game["User" .. "Input" .. "Service"]
-    local TweenService  = game["Tween" .. "Service"]
-    local RunService    = game["Run" .. "Service"]
-    local HttpService   = game["Http" .. "Service"]
-    local TextService   = game["Text" .. "Service"]
-    local Lighting      = game["Light" .. "ing"]
+    local Players       = game:GetService("Players")
+    local Teams         = game:GetService("Teams")
+    local Input         = game:GetService("UserInputService")
+    local TweenService  = game:GetService("TweenService")
+    local RunService    = game:GetService("RunService")
+    local HttpService   = game:GetService("HttpService")
+    local TextService   = game:GetService("TextService")
+    local Lighting      = game:GetService("Lighting")
 
     local player = Players.LocalPlayer
     local UI, Section = {}, {}
     UI.__index, Section.__index = UI, Section
-
-    local S_LIB = "U" .. "I"
-    local S_HUB = "S" .. "k" .. "id" .. " hub"
-    local S_HUD_TITLE = "Tar" .. "get " .. "HUD"
-    local S_MOD_TITLE = "Mo" .. "der" .. "ators"
 
     local function safe(fn, ...)
         if type(fn) ~= "function" then return false end
@@ -553,18 +548,18 @@ local UI = (function()
         self.keybindListEnabled = options.KeybindList ~= false
         self.targetHUDEnabled = options.TargetHud ~= false
         self.moderatorsEnabled = options.Moderators ~= false
-        self.hudName = tostring(options.WatermarkName or options.Title or S_HUB)
+        self.hudName = tostring(options.WatermarkName or options.Title or "Skid hub")
         self.keybindRows = {}
         self.keybindDirty = true
         self.keybindVisibleCount = 0
         self.hudStatsDirty = true
         self.frameCount = 0; self.frameElapsed = 0; self.statsElapsed = 0
         self.fps = 0
-        self.playerCount = #Players:GetChildren()
+        self.playerCount = #Players:GetPlayers()
         self.clock = os.date("%H:%M:%S")
         self._targetStatusRole = "muted"
 
-        self.watermark = self:_hudCard("W" .. math.random(1000, 9999), UDim2.new(.5, 0, 0, 12), Vector2.new(.5, 0), 540, 32)
+        self.watermark = self:_hudCard("Watermark", UDim2.new(.5, 0, 0, 12), Vector2.new(.5, 0), 540, 32)
         self.watermark.Visible = self.watermarkEnabled
         self.watermarkTitle = self:_text(self.watermark, self.hudName, nil, "accent")
         self.watermarkTitle.Position = UDim2.fromOffset(12, 0)
@@ -581,14 +576,14 @@ local UI = (function()
 
         local targetHUDWidth, targetHUDHeight = 240, 92
         local tPanel, tHeader = self:_hudCard(
-            "T" .. math.random(1000, 9999), UDim2.new(1, -12, .5, 0), Vector2.new(1, .5),
+            "TargetHUD", UDim2.new(1, -12, .5, 0), Vector2.new(1, .5),
             targetHUDWidth, targetHUDHeight
         )
         self.targetHUD = tPanel
         self.targetHUD.Visible = self.targetHUDEnabled
         self.targetHUDHeight = targetHUDHeight
 
-        self:_hudTitle(tHeader, S_HUD_TITLE, false, "person", "accent")
+        self:_hudTitle(tHeader, "Target HUD", false, "person", "accent")
 
         self.targetAvatar = create("ImageLabel", {
             BackgroundColor3 = Color3.fromRGB(20, 20, 20),
@@ -627,7 +622,7 @@ local UI = (function()
         self.targetHealthBar.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
         round(self.targetHealthBar, 4)
 
-        local panel, header = self:_hudCard("K" .. math.random(1000, 9999), UDim2.new(0, 12, 0.5, 0), Vector2.new(0, 0), 240, 40)
+        local panel, header = self:_hudCard("Keybinds", UDim2.new(0, 12, 0.5, 0), Vector2.new(0, 0), 240, 40)
         self.keybindPanel = panel
         panel.Visible = self.keybindListEnabled
         local title
@@ -651,11 +646,11 @@ local UI = (function()
         emptyText.Size = UDim2.new(1, -24, 1, 0)
         emptyText.TextTruncate = Enum.TextTruncate.AtEnd
 
-        local modPanel, modHeader = self:_hudCard("M" .. math.random(1000, 9999), UDim2.new(1, -12, 0.5, 0), Vector2.new(1, 0), 240, 90)
+        local modPanel, modHeader = self:_hudCard("Moderators", UDim2.new(1, -12, 0.5, 0), Vector2.new(1, 0), 240, 90)
         self.modPanel = modPanel
         self.modPanel.Visible = self.moderatorsEnabled
         local modTitle
-        modTitle, self.modCount = self:_hudTitle(modHeader, S_MOD_TITLE, true)
+        modTitle, self.modCount = self:_hudTitle(modHeader, "Moderators", true)
 
         self.modBody = create("ScrollingFrame", {
             BackgroundTransparency = 1, BorderSizePixel = 0,
@@ -668,7 +663,7 @@ local UI = (function()
         self.modListCount = 1
 
         local ok, stat = pcall(function()
-            return game:GetService("St" .. "ats").Network.ServerStatsItem["Data Ping"]
+            return game:GetService("Stats").Network.ServerStatsItem["Data Ping"]
         end)
         self.pingStat = ok and stat or nil
 
@@ -831,7 +826,7 @@ local UI = (function()
 
     function UI:SetWatermarkName(value)
         if self.destroyed or not self.watermarkTitle then return end
-        self.hudName = tostring(value or S_HUB)
+        self.hudName = tostring(value or "Skid hub")
         self:_changeText(self.watermarkTitle, self.hudName, true)
         self:_layoutHUD()
     end
@@ -1183,7 +1178,7 @@ local UI = (function()
 
     function UI.new(options)
         options = options or {}
-        assert(player, "UI must run on the roblox client")
+        assert(player, "SkidUi must run on the roblox client")
 
         local self = setmetatable({
             colors        = table.clone(defaults),
@@ -1196,7 +1191,7 @@ local UI = (function()
             tweens        = setmetatable({}, {__mode = "k"}),
             easing        = Enum.EasingStyle.Quint,
             visible       = true,
-            configFolder  = options.ConfigFolder or S_LIB,
+            configFolder  = options.ConfigFolder or "SkidUi",
             toggleKey     = keyOf(options.ToggleKey or "RightShift"),
             size          = options.Size or Vector2.new(720, 558),
             blurSize      = 12
@@ -1205,15 +1200,15 @@ local UI = (function()
         self.colors.accent = options.Accent or self.colors.accent
         self.accent = self.colors.accent
 
-        self.blur = create("BlurEffect", {Size = 0, Name = "Bl_" .. math.random(1000, 9999)}, Lighting)
+        self.blur = create("BlurEffect", {Size = 0, Name = "SkidBlur"}, Lighting)
 
         self.gui = create("ScreenGui", {
-            Name = "UI_" .. HttpService:GenerateGUID(false),
+            Name = "SkidHub_" .. HttpService:GenerateGUID(false),
             IgnoreGuiInset = true, ResetOnSpawn = false,
             DisplayOrder = 1000, ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
         })
         local ok = pcall(function()
-            self.gui.Parent = type(gethui) == "function" and gethui() or game:GetService("Core" .. "Gui")
+            self.gui.Parent = type(gethui) == "function" and gethui() or game:GetService("CoreGui")
         end)
         if not ok or not self.gui.Parent then
             self.gui.Parent = player:WaitForChild("PlayerGui")
@@ -3032,6 +3027,7 @@ local UI = (function()
         local h, s, v = base:ToHSV()
         local initialAlpha = options.Alpha
         if initialAlpha == nil and options.Transparency ~= nil then
+            -- Roblox convention: Transparency 0 = visible, 1 = invisible
             initialAlpha = 1 - clamp(options.Transparency, 0, 1)
         end
         local alpha = clamp(initialAlpha == nil and 1 or initialAlpha, 0, 1)
@@ -3473,6 +3469,7 @@ local UI = (function()
             if kind == "Color" and control.Get then
                 local colorData = control:Get()
                 local alpha = type(colorData) == "table" and colorData.a or 1
+                -- Roblox convention: Transparency 0 = visible, 1 = invisible
                 control.Transparency = 1 - alpha
             end
 
@@ -3551,6 +3548,8 @@ local UI = (function()
                         value = {args[1], args[2]}
                     elseif kind == "Color" then
                         value = args[1]
+                        -- Colorpicker always emits alpha internally; convert to Roblox Transparency for API
+                        -- Transparency: 0 = visible, 1 = invisible
                         local alphaVal = args[2] or 1
                         control.Transparency = 1 - alphaVal
                         control.Mode = args[3]
@@ -3570,6 +3569,7 @@ local UI = (function()
                     end
                     if not finishedSuppressed then
                         if kind == "Color" then
+                            -- Always pass Roblox Transparency to Callback: 0 = visible, 1 = invisible
                             local alphaVal = args[2] or 1
                             invoke(originalCallback, args[1], 1 - alphaVal, args[3])
                         else
@@ -3858,8 +3858,8 @@ local UI = (function()
             options.Options = options.Options or options.Values or {}
             if options.SpecialType == "Player" then
                 options.Options = {}
-                for _, p in ipairs(Players:GetChildren()) do
-                    if p:IsA("Player") and not (options.ExcludeLocalPlayer and p == player) then
+                for _, p in ipairs(Players:GetPlayers()) do
+                    if not (options.ExcludeLocalPlayer and p == player) then
                         table.insert(options.Options, p.Name)
                     end
                 end
@@ -3877,9 +3877,11 @@ local UI = (function()
         elseif methodName == "Colorpicker" then
             options.Text = options.Text or options.Title or index
             if options.Transparency ~= nil then
+                -- Roblox convention: Transparency 0 = visible, 1 = invisible
                 options.Alpha = 1 - clamp(options.Transparency, 0, 1)
                 options._usesTransparency = true
             end
+
         elseif methodName == "Input" then
             options.MaxLength = tonumber(options.MaxLength)
         elseif methodName == "Keybind" then
@@ -3923,8 +3925,8 @@ local UI = (function()
         if methodName == "Dropdown" and options.SpecialType == "Player" then
             local function refreshPlayers()
                 local values = {}
-                for _, p in ipairs(Players:GetChildren()) do
-                    if p:IsA("Player") and not (options.ExcludeLocalPlayer and p == player) then
+                for _, p in ipairs(Players:GetPlayers()) do
+                    if not (options.ExcludeLocalPlayer and p == player) then
                         table.insert(values, p.Name)
                     end
                 end
@@ -4183,7 +4185,7 @@ local UI = (function()
             if soundId ~= nil then
                 local ok, sound = pcall(function()
                     local s = Instance.new("Sound")
-                    s.Name = "S_" .. math.random(1000, 9999)
+                    s.Name = "SkidUiNotificationSound"
                     s.SoundId = tostring(soundId):match("^rbxassetid://") and tostring(soundId)
                         or ("rbxassetid://" .. tostring(soundId))
                     s.Volume = 0.65
@@ -4311,46 +4313,42 @@ local UI = (function()
                 for _, x in ipairs(rows:GetChildren()) do
                     if x:IsA("TextButton") then pcall(function() x:Destroy() end) end
                 end
-                local index = 0
-                for _, p in ipairs(Players:GetChildren()) do
-                    if p:IsA("Player") then
-                        index = index + 1
-                        if (p.Name .. " " .. p.DisplayName):lower():find(finder.Text:lower(), 1, true) then
-                            local item = p
-                            local b = create("TextButton", {
-                                Text = "",
-                                BackgroundColor3 = ui.accent,
-                                BackgroundTransparency = 1,
-                                BorderSizePixel = 0,
-                                AutoButtonColor = false,
-                                Size = UDim2.new(1, -2, 0, 29),
-                                LayoutOrder = index,
-                            }, rows)
-                            round(b, 4)
-                            ui:_gradient(b)
-                            if item == selected then ui:_tween(b, {BackgroundTransparency = 0.9}, .3) end
-                            for i, value in ipairs({
-                                item.DisplayName ~= item.Name
-                                    and (item.DisplayName .. " (" .. item.Name .. ")")
-                                    or item.Name,
-                                item.Team and item.Team.Name or "None",
-                                api:GetStatus(item),
-                            }) do
-                                local t = ui:_text(b, value, 12, "muted")
-                                t.Position = UDim2.new(xPositions[i], 0, 0, 0)
-                                t.Size = UDim2.new(.32, -5, 1, 0)
-                                t.TextTruncate = Enum.TextTruncate.AtEnd
-                                t:SetAttribute("CellRole",
-                                    item == selected and "selected"
-                                    or (i == 3 and item == player and "local" or "muted"))
-                                if item == selected then
-                                    t.TextColor3 = ui.colors.ink
-                                elseif i == 3 and item == player then
-                                    t.TextColor3 = Color3.fromRGB(45, 240, 188)
-                                end
+                for index, p in ipairs(Players:GetPlayers()) do
+                    if (p.Name .. " " .. p.DisplayName):lower():find(finder.Text:lower(), 1, true) then
+                        local item = p
+                        local b = create("TextButton", {
+                            Text = "",
+                            BackgroundColor3 = ui.accent,
+                            BackgroundTransparency = 1,
+                            BorderSizePixel = 0,
+                            AutoButtonColor = false,
+                            Size = UDim2.new(1, -2, 0, 29),
+                            LayoutOrder = index,
+                        }, rows)
+                        round(b, 4)
+                        ui:_gradient(b)
+                        if item == selected then ui:_tween(b, {BackgroundTransparency = 0.9}, .3) end
+                        for i, value in ipairs({
+                            item.DisplayName ~= item.Name
+                                and (item.DisplayName .. " (" .. item.Name .. ")")
+                                or item.Name,
+                            item.Team and item.Team.Name or "None",
+                            api:GetStatus(item),
+                        }) do
+                            local t = ui:_text(b, value, 12, "muted")
+                            t.Position = UDim2.new(xPositions[i], 0, 0, 0)
+                            t.Size = UDim2.new(.32, -5, 1, 0)
+                            t.TextTruncate = Enum.TextTruncate.AtEnd
+                            t:SetAttribute("CellRole",
+                                item == selected and "selected"
+                                or (i == 3 and item == player and "local" or "muted"))
+                            if item == selected then
+                                t.TextColor3 = ui.colors.ink
+                            elseif i == 3 and item == player then
+                                t.TextColor3 = Color3.fromRGB(45, 240, 188)
                             end
-                            b.Activated:Connect(function() safe(function() api:Select(item) end) end)
                         end
+                        b.Activated:Connect(function() safe(function() api:Select(item) end) end)
                     end
                 end
                 if selected and selected.Parent then
@@ -4401,7 +4399,7 @@ local UI = (function()
             ui:_connect(p:GetPropertyChangedSignal("Team"), function() safe(function() api:Refresh() end) end)
             ui:_connect(p:GetPropertyChangedSignal("DisplayName"), function() safe(function() api:Refresh() end) end)
         end
-        for _, p in ipairs(Players:GetChildren()) do if p:IsA("Player") then watch(p) end end
+        for _, p in ipairs(Players:GetPlayers()) do watch(p) end
         ui:_connect(Players.PlayerAdded, function(p) watch(p) safe(function() api:Refresh() end) end)
         ui:_connect(Players.PlayerRemoving, function(p)
             status[p.UserId] = nil
@@ -4765,7 +4763,7 @@ local UI = (function()
 
     UI.Section = Section
     UI.Version = "2.4.0"
-    UI.Description = "UI interface library"
+    UI.Description = "SkidUi interface library"
     return UI
 end)()
 
