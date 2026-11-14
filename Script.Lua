@@ -3027,6 +3027,7 @@ local UI = (function()
         local h, s, v = base:ToHSV()
         local initialAlpha = options.Alpha
         if initialAlpha == nil and options.Transparency ~= nil then
+            -- Roblox convention: Transparency 0 = visible, 1 = invisible
             initialAlpha = 1 - clamp(options.Transparency, 0, 1)
         end
         local alpha = clamp(initialAlpha == nil and 1 or initialAlpha, 0, 1)
@@ -3465,8 +3466,10 @@ local UI = (function()
             if kind == "Color" and control.Get then
                 local colorData = control:Get()
                 local alpha = type(colorData) == "table" and colorData.a or 1
-                control.Transparency = options._usesTransparency and (1 - alpha) or alpha
+                -- Roblox convention: Transparency 0 = visible, 1 = invisible
+                control.Transparency = 1 - alpha
             end
+
             control._changedCallbacks = control._changedCallbacks or {}
             control._clickCallbacks = control._clickCallbacks or {}
             control.Tooltip = options.Tooltip
@@ -3542,7 +3545,10 @@ local UI = (function()
                         value = {args[1], args[2]}
                     elseif kind == "Color" then
                         value = args[1]
-                        control.Transparency = options._usesTransparency and (1 - (args[2] or 1)) or args[2]
+                        -- Colorpicker always emits alpha internally; convert to Roblox Transparency for API
+                        -- Transparency: 0 = visible, 1 = invisible
+                        local alphaVal = args[2] or 1
+                        control.Transparency = 1 - alphaVal
                         control.Mode = args[3]
                     elseif kind == "Dropdown" and options.Multi then
                         value = self:_publicValue(control, kind, args[1], options)
@@ -3559,12 +3565,15 @@ local UI = (function()
                         end
                     end
                     if not finishedSuppressed then
-                        if kind == "Color" and options._usesTransparency then
-                            invoke(originalCallback, args[1], 1 - (args[2] or 1))
+                        if kind == "Color" then
+                            -- Always pass Roblox Transparency to Callback: 0 = visible, 1 = invisible
+                            local alphaVal = args[2] or 1
+                            invoke(originalCallback, args[1], 1 - alphaVal, args[3])
                         else
                             invoke(originalCallback, table.unpack(args, 1, args.n))
                         end
                     end
+
                     if kind == "Keybind" then
                         for _, callback in ipairs(control._clickCallbacks) do
                             invoke(callback, table.unpack(args, 1, args.n))
@@ -3865,9 +3874,11 @@ local UI = (function()
         elseif methodName == "Colorpicker" then
             options.Text = options.Text or options.Title or index
             if options.Transparency ~= nil then
+                -- Roblox convention: Transparency 0 = visible, 1 = invisible
                 options.Alpha = 1 - clamp(options.Transparency, 0, 1)
                 options._usesTransparency = true
             end
+
         elseif methodName == "Input" then
             options.MaxLength = tonumber(options.MaxLength)
         elseif methodName == "Keybind" then
